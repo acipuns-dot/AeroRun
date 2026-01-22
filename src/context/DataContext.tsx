@@ -59,6 +59,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const fetchedWorkouts = workoutsRes.data || [];
             const fetchedActivities = Array.isArray(activitiesRes) ? activitiesRes : [];
 
+            console.log('[DataContext] Updating state with:', {
+                workoutsCount: fetchedWorkouts.length,
+                activitiesCount: fetchedActivities.length
+            });
+
             // --- AUTO-SYNC COMPLETION ---
             // If a workout is not marked completed but we have an activity on that day, mark it done!
             const updatedWorkouts = [...fetchedWorkouts];

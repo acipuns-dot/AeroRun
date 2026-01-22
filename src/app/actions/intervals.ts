@@ -24,11 +24,16 @@ async function getCredentials() {
         .single();
 
     if (error || !profile?.intervals_api_key || !profile?.intervals_athlete_id) {
+        console.error("[getCredentials] Missing profile or credentials:", { error, hasApiKey: !!profile?.intervals_api_key, hasAthleteId: !!profile?.intervals_athlete_id });
         throw new Error("Intervals.icu credentials not configured.");
     }
 
+    // SANITIZATION: Remove any leading 'i' or non-numeric characters from Athlete ID
+    const sanitizedId = profile.intervals_athlete_id.replace(/\D/g, "");
+    console.log("[getCredentials] Sanitized Athlete ID:", { original: profile.intervals_athlete_id, sanitized: sanitizedId });
+
     return {
-        athleteId: profile.intervals_athlete_id,
+        athleteId: sanitizedId,
         apiKey: profile.intervals_api_key
     };
 }
@@ -52,8 +57,7 @@ export async function getActivitiesAction() {
             cache: 'no-store'
         });
 
-        console.log('[Server Action] Response status:', response.status);
-        console.log('[Server Action] Response ok:', response.ok);
+        console.log('[Server Action] Response status:', response.status, response.statusText);
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -63,17 +67,19 @@ export async function getActivitiesAction() {
         }
 
         const data = await response.json();
-        console.log('[Server Action] Raw response type:', typeof data);
-        console.log('[Server Action] Is array:', Array.isArray(data));
-        console.log('[Server Action] Activities count:', Array.isArray(data) ? data.length : 'N/A');
-
-        if (Array.isArray(data) && data.length > 0) {
-            console.log('[Server Action] First activity:', data[0]);
-        }
+        console.log('[Server Action] Processed results:', {
+            isArray: Array.isArray(data),
+            count: Array.isArray(data) ? data.length : 'N/A',
+            firstSample: Array.isArray(data) && data.length > 0 ? {
+                id: data[0].id,
+                name: data[0].name,
+                start_date: data[0].start_date
+            } : null
+        });
 
         return Array.isArray(data) ? data : [];
     } catch (error) {
-        console.error("[Server Action] Exception:", error);
+        console.error("[Server Action] Exception in getActivitiesAction:", error);
         return [];
     }
 }

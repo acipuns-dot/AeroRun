@@ -164,7 +164,16 @@ export async function generateFullPlanAction(stats: UserStats, selectedId: strin
     - Tempo: ${guidance.tempoRange}
     - Intervals: ${guidance.intervalPace}
 
-    JSON: { "weeks": [ { "week_number": 1, "days": [...] } ] }
+    JSON STRUCTURE:
+    { "weeks": [ 
+        { 
+          "week_number": 1, 
+          "days": [ 
+            { "day": "Monday", "type": "easy", "description": "- 5km Easy Pace: 6:00/km", "distance": 5.0, "duration": 40, "target_pace": "6:00/km" } 
+          ] 
+        } 
+      ] 
+    }
     `;
 
     return await callGroq(prompt, false);

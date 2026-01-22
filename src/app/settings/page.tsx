@@ -188,9 +188,10 @@ export default function Settings() {
             }
 
             const workoutsToInsert = selectedPlan.weeks.flatMap((week: any) =>
-                week.days.map((day: any) => {
+                (week.days || []).map((day: any) => {
                     // Normalize AI Day Input: "thu", "THU", "Thursday ", "Day 4" -> Standardize to "Thursday"
                     const normalizeDay = (d: string) => {
+                        if (!d) return "Monday";
                         const clean = d.trim().toLowerCase();
                         if (clean.startsWith("mon")) return "Monday";
                         if (clean.startsWith("tue")) return "Tuesday";

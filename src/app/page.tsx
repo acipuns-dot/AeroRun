@@ -196,7 +196,7 @@ export default function Home() {
         )
       }
 
-      < div className={`glass p-6 space-y-4 relative overflow-hidden transition-all duration-500 ${todayWorkout?.type.toLowerCase() === 'race' ? 'border-primary/50 shadow-[0_0_30px_rgba(0,229,255,0.2)]' : ''}`
+      < div className={`glass p-6 space-y-4 relative overflow-hidden transition-all duration-500 ${todayWorkout?.completed ? 'border-primary/30 shadow-[0_0_20px_rgba(0,229,255,0.1)]' : todayWorkout?.type.toLowerCase() === 'race' ? 'border-primary/50 shadow-[0_0_30px_rgba(0,229,255,0.2)]' : ''}`
       }>
         <div className="absolute top-0 right-0 p-4 opacity-10">
           {todayWorkout?.type.toLowerCase() === 'race' ? <Trophy className="w-16 h-16 text-primary" /> : <Target className="w-16 h-16 text-primary" />}
@@ -237,13 +237,13 @@ export default function Home() {
               <div className="flex gap-2">
                 <button
                   onClick={toggleWorkoutCompletion}
-                  className={`flex-1 font-bold py-4 rounded-xl flex items-center justify-center space-x-2 active:scale-95 transition-all shadow-lg border ${todayWorkout.completed
-                    ? 'bg-green-500/10 border-green-500/50 text-green-500'
+                  className={`flex-1 font-black italic py-4 rounded-xl flex items-center justify-center space-x-2 active:scale-95 transition-all shadow-lg border-2 ${todayWorkout.completed
+                    ? 'bg-primary/10 border-primary/40 text-primary shadow-[0_0_20px_rgba(0,229,255,0.1)]'
                     : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'
                     }`}
                 >
-                  <CheckCircle2 className={`w-5 h-5 ${todayWorkout.completed ? 'text-green-500' : 'text-white/20'}`} />
-                  <span className="uppercase tracking-widest text-sm">{todayWorkout.completed ? 'Completed' : 'Mark Done'}</span>
+                  <CheckCircle2 className={`w-5 h-5 ${todayWorkout.completed ? 'text-primary' : 'text-white/20'}`} />
+                  <span className="uppercase tracking-[0.2em] text-xs">{todayWorkout.completed ? 'COMPLETED' : 'MARK DONE'}</span>
                 </button>
 
                 {!todayWorkout.completed && (

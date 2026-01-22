@@ -363,10 +363,8 @@ export default function Settings() {
                                             key={fullDay}
                                             onClick={() => {
                                                 if (isSelected) {
-                                                    // Deselect (but ensure we keep at least daysPerWeek selected)
-                                                    if (selectedRunDays.length > daysPerWeek) {
-                                                        setSelectedRunDays(selectedRunDays.filter(d => d !== fullDay));
-                                                    }
+                                                    // Always allow deselection
+                                                    setSelectedRunDays(selectedRunDays.filter(d => d !== fullDay));
                                                 } else {
                                                     // Select (but don't exceed daysPerWeek)
                                                     if (selectedRunDays.length < daysPerWeek) {

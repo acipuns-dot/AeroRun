@@ -142,3 +142,28 @@ export async function getActivityDetailsAction(activityId: string) {
         return null;
     }
 }
+
+export async function getActivityStreamsAction(activityId: string) {
+    console.log('[Server Action] getActivityStreamsAction called for ID:', activityId);
+
+    try {
+        const url = `${INTERVALS_BASE_URL}/athlete/${ATHLETE_ID}/activities/${activityId}/streams.json?types=latlng`;
+        console.log('[Server Action] Fetching activity streams from:', url);
+
+        const response = await fetch(url, {
+            headers: getHeaders(),
+            cache: 'no-store'
+        });
+
+        if (!response.ok) {
+            console.error(`[Server Action] API Error: ${response.status} ${response.statusText}`);
+            return null;
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error("[Server Action] Exception fetching activity streams:", error);
+        return null;
+    }
+}

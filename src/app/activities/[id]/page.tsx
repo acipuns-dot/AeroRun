@@ -2,12 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getActivityDetailsAction } from "@/app/actions/intervals";
+import { getActivityDetailsAction, getActivityStreamsAction } from "@/app/actions/intervals";
 import BottomNav from "@/components/BottomNav";
 import { motion } from "framer-motion";
 import { ArrowLeft, MapPin, Clock, Zap, TrendingUp, Heart, Activity as ActivityIcon, Mountain } from "lucide-react";
 import { format } from "date-fns";
 import { useData } from "@/context/DataContext";
+import dynamic from "next/dynamic";
+
+const Map = dynamic(() => import("@/components/Map"), {
+    ssr: false,
+    loading: () => <div className="h-64 w-full bg-white/5 animate-pulse rounded-2xl flex items-center justify-center text-white/20 uppercase text-xs font-black">Loading Map...</div>
+});
 
 export default function ActivityDetail() {
     const params = useParams();
@@ -15,27 +21,40 @@ export default function ActivityDetail() {
     const { activities, isLoading: isContextLoading } = useData();
     const [activity, setActivity] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [coordinates, setCoordinates] = useState<[number, number][]>([]);
 
     useEffect(() => {
         const loadActivity = async () => {
-            if (!params.id) return;
+            const activityId = params.id as string;
+            if (!activityId) return;
+
+            let currentActivity = null;
 
             // 1. Try to find in context first
-            const localActivity = activities?.find((a: any) => a.id === params.id);
+            const localActivity = activities?.find((a: any) => a.id.toString() === activityId);
             if (localActivity) {
                 console.log('[ActivityDetail] Found activity in context');
-                setActivity(localActivity);
-                setIsLoading(false);
-                return;
-            }
-
-            // 2. Fallback to API if not in context or context is loading
-            if (!isContextLoading) {
+                currentActivity = localActivity;
+            } else if (!isContextLoading) {
+                // 2. Fallback to API if not in context or context is loading
                 console.log('[ActivityDetail] Not found in context, fetching from API...');
                 setIsLoading(true);
-                const data = await getActivityDetailsAction(params.id as string);
-                setActivity(data);
+                currentActivity = await getActivityDetailsAction(activityId);
                 setIsLoading(false);
+            }
+
+            if (currentActivity) {
+                setActivity(currentActivity);
+                setIsLoading(false);
+
+                // Fetch GPS data
+                const streams = await getActivityStreamsAction(activityId);
+                if (streams) {
+                    const latlngStream = streams.find((s: any) => s.type === "latlng");
+                    if (latlngStream && latlngStream.data) {
+                        setCoordinates(latlngStream.data);
+                    }
+                }
             }
         };
 
@@ -109,6 +128,17 @@ export default function ActivityDetail() {
                         <p className="text-2xl font-black">{activity.average_heartrate || "--"} <span className="text-sm font-normal text-white/40">bpm</span></p>
                     </div>
                 </div>
+
+                {/* Map */}
+                {coordinates.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="w-full"
+                    >
+                        <Map coordinates={coordinates} />
+                    </motion.div>
+                )}
 
                 {/* Additional Metrics */}
                 {(activity.total_elevation_gain || activity.average_cadence || activity.calories) && (

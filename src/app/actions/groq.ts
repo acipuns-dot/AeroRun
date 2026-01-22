@@ -146,11 +146,17 @@ export const generateTrainingPlanAction = async (stats: UserStats) => {
     
     ${REALITY_CHECK_RULES}
     // ...
-    CRITICAL PACING CONSTRAINTS:
+    CRITICAL PACING CONSTRAINTS (BASELINE):
     1. **Easy / Long Runs**: ${easyRange} (Floor: 9:30/km).
     2. **Tempo / Threshold**: ${tempoRange}
     3. **Intervals**: ${intervalPace} (ABSOLUTE SPEED LIMIT. DO NOT SUGGEST FASTER THAN THIS).
     4. **Race Day Target**: ${targetGoalPace}.
+
+    PROGRESSION RULES (MUST APPLY):
+    - **Gradual Improvement**: You MUST simulate fitness gains. Do NOT output the same pace for 12 weeks.
+    - **Tempo/Intervals**: Start at the slower/safer end. By the final 4 weeks, progress to the faster end of the provided ranges.
+    - **Easy Runs**: Can slightly improve (e.g., 5-10s/km faster) in phase 2 and 3, but prioritize recovery.
+    - **Volume**: Increase distance/duration gradually (max 10% per week).
 
     REALITY CHECK Analysis:
     ${realityCheckNote || "Goal seems reasonable relative to current fitness."}

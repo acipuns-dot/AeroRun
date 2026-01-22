@@ -787,7 +787,7 @@ export default function Settings() {
                                     onChange={(e) => setEditAthleteId(e.target.value)}
                                     className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white focus:outline-none focus:border-primary transition-colors text-sm font-mono"
                                 />
-                                <p className="text-[9px] text-white/20 ml-1 italic">Found under "Athlete ID" (do not include the 'i')</p>
+                                <p className="text-[9px] text-white/20 ml-1 italic">Include the 'i' if your ID has one (e.g. i12345)</p>
                             </div>
 
                             <div className="space-y-2">

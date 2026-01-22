@@ -56,11 +56,11 @@ async function getCredentials() {
         throw new Error("API Key is missing in your profile.");
     }
 
-    // SANITIZATION: Remove non-numeric characters from Athlete ID
-    const sanitizedId = profile.intervals_athlete_id.replace(/\D/g, "");
+    // SANITIZATION: Keep the 'i' prefix if present, as most modern accounts require it.
+    const sanitizedId = profile.intervals_athlete_id.trim();
 
     if (!sanitizedId) {
-        throw new Error(`Invalid Athlete ID format: "${profile.intervals_athlete_id}". It must contain numeric digits.`);
+        throw new Error(`Invalid Athlete ID format: "${profile.intervals_athlete_id}".`);
     }
 
     console.log("[getCredentials] Success:", {

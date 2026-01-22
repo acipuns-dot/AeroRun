@@ -48,11 +48,25 @@ export default function ActivityDetail() {
                 setIsLoading(false);
 
                 // Fetch GPS data
+                console.log('[ActivityDetail] Fetching streams for:', activityId);
                 const streams = await getActivityStreamsAction(activityId);
-                if (streams) {
+                console.log('[ActivityDetail] Streams received:', streams ? 'yes' : 'no');
+
+                if (streams && Array.isArray(streams)) {
                     const latlngStream = streams.find((s: any) => s.type === "latlng");
-                    if (latlngStream && latlngStream.data) {
-                        setCoordinates(latlngStream.data);
+                    console.log('[ActivityDetail] LatLng stream found:', latlngStream ? 'yes' : 'no');
+                    if (latlngStream && latlngStream.data && latlngStream.data2) {
+                        console.log('[ActivityDetail] LatLng data points:', latlngStream.data.length);
+                        // Intervals.icu format: data = [lats], data2 = [lngs]
+                        const zippedCoords: [number, number][] = latlngStream.data.map((lat: number, i: number) => {
+                            return [lat, latlngStream.data2[i]];
+                        });
+                        setCoordinates(zippedCoords);
+                    } else if (latlngStream && latlngStream.data) {
+                        // Plan B: In case some activities return [lat, lng] pairs in data
+                        if (Array.isArray(latlngStream.data[0])) {
+                            setCoordinates(latlngStream.data);
+                        }
                     }
                 }
             }

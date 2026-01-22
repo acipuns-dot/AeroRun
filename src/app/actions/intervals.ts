@@ -161,6 +161,16 @@ export async function getActivityStreamsAction(activityId: string) {
         }
 
         const data = await response.json();
+        console.log('[Server Action] Activity streams fetched:', Array.isArray(data) ? data.map((s: any) => s.type) : 'Error format');
+        if (Array.isArray(data)) {
+            const latlng = data.find((s: any) => s.type === 'latlng');
+            if (latlng) {
+                console.log('[Server Action] LatLng data length:', latlng.data?.length);
+                if (latlng.data?.length > 0) {
+                    console.log('[Server Action] First coord sample:', latlng.data[0]);
+                }
+            }
+        }
         return data;
     } catch (error) {
         console.error("[Server Action] Exception fetching activity streams:", error);

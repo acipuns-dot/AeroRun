@@ -101,82 +101,58 @@ function getDetailedGuidance(stats: UserStats) {
 
 // --- SERVER ACTIONS ---
 
+import { generateEnginePlan } from "@/lib/plan-engine";
+
+/**
+ * STEP 1: Discover 3 training plan strategies.
+ */
 export async function generatePlanOptionsAction(stats: UserStats) {
     const guidance = getDetailedGuidance(stats);
-    const distanceKey = stats.targetDistance as keyof typeof COACHING_KNOWLEDGE;
-    const expertKnowledge = COACHING_KNOWLEDGE[distanceKey] || COACHING_KNOWLEDGE["5km"];
-
-    let realityCheckNote = "";
-    if (stats.targetTime) {
-        const goalPaceSec = parseTimeStringToSeconds(stats.targetTime)! / getDistanceKm(stats.targetDistance);
-        if (goalPaceSec < (parseTimeStringToSeconds(stats.best5kTime)! / 5)) {
-            realityCheckNote = "WARNING: Goal pace is faster than 5k PB. Plan EXTENDED to 18 weeks.";
-        }
-    }
 
     const prompt = `
-    You are an elite endurance coach.
-    TASK: Discover 3 training strategies for ${stats.targetDistance}.
+    TASK: Provide the "Coaching Voice" for 3 training options for ${stats.targetDistance}.
     
-    USER PROFILE: 
-    - PB: ${stats.best5kTime} (${guidance.currentPbPace})
-    - Goal Time: ${stats.targetTime || "N/A"}
+    USER PROFILE:
+    - 5km PB: ${stats.best5kTime} (${guidance.currentPbPace})
+    - Goal: ${stats.targetDistance}
     - Level: ${stats.goal}
+    
+    OPTIONS REQUIRING COACHING VOICES:
+    1. "Steady": Focus on aerobic foundation and volume consistency.
+    2. "Performance": Focus on speed development and aggressive interval targets.
+    3. "Health": Focus on injury prevention and sustainable longevity.
 
-    METHODOLOGY:
-    ${expertKnowledge}
-    ${REALITY_CHECK_RULES}
-    ${guidance.volumeGuidance}
+    Return a JSON object with:
+    - id: "steady" | "performance" | "health"
+    - title: Strategic Name
+    - strategy_reasoning: (STRICT 2 SENTENCES) High-level coaching approach.
+    - description: (STRICT 1 SENTENCE) A catchy summary of what makes this plan unique.
+    - coach_notes: (STRICT 1 SENTENCE) Specific expert tip for this path.
 
-    JSON STRUCTURE:
-    { "options": [{ 
-        "id": "steady|performance|health", 
-        "title": "...", 
-        "strategy_reasoning": "Explain the 80/20, periodization, and how you handle their pace gaps.",
-        "description": "Short summary", 
-        "coach_notes": "One key tip", 
-        "total_weeks": ${realityCheckNote ? 18 : 12}, 
-        "target_peak_volume": ${guidance.peakWeeklyKm} 
-    }] }
+    JSON: { "options": [...] }
     `;
 
-    return await callGroq(prompt, true);
+    const aiOptions = await callGroq(prompt, true);
+
+    // Merge AI personality with engine-calculated metadata
+    const finalOptions = await Promise.all(aiOptions.options.map(async (opt: any) => {
+        const enginePreview = await generateEnginePlan(stats, opt.id as any);
+        return {
+            ...opt,
+            total_weeks: enginePreview.total_weeks,
+            target_peak_volume: Math.round(enginePreview.weeks[Math.floor(enginePreview.total_weeks * 0.7)].days.reduce((acc: number, d: any) => acc + (d.distance || 0), 0))
+        };
+    }));
+
+    return { options: finalOptions };
 }
 
+/**
+ * STEP 2: Generate the FULL schedule.
+ * Logic: 100% Deterministic Engine for reliability.
+ */
 export async function generateFullPlanAction(stats: UserStats, selectedId: string, options: any[]) {
-    const selected = options.find(o => o.id === selectedId);
-    const guidance = getDetailedGuidance(stats);
-    const distanceKey = stats.targetDistance as keyof typeof COACHING_KNOWLEDGE;
-    const expertKnowledge = COACHING_KNOWLEDGE[distanceKey] || COACHING_KNOWLEDGE["5km"];
-
-    const prompt = `
-    TASK: Build the COMPLETE schedule.
-    STRATEGY: ${selected.title} - ${selected.strategy_reasoning}
-    WEEKS: 1 to ${selected.total_weeks} (NO SKIPPING WEEKS).
-
-    STRICT COACHING BRAIN:
-    - **80/20 RULE**: Only 1-2 quality runs.
-    - **Intervals.icu Syntax**: Every step starts with '- '. Format: '- [Distance/Time] [Type] [Pace/Effort]'
-    - **Volume**: Start at ~${guidance.peakWeeklyKm * 0.5}km, peak at ${selected.target_peak_volume}km.
-    
-    PACING:
-    - Easy: ${guidance.easyRange}
-    - Tempo: ${guidance.tempoRange}
-    - Intervals: ${guidance.intervalPace}
-
-    JSON STRUCTURE:
-    { "weeks": [ 
-        { 
-          "week_number": 1, 
-          "days": [ 
-            { "day": "Monday", "type": "easy", "description": "- 5km Easy Pace: 6:00/km", "distance": 5.0, "duration": 40, "target_pace": "6:00/km" } 
-          ] 
-        } 
-      ] 
-    }
-    `;
-
-    return await callGroq(prompt, false);
+    return await generateEnginePlan(stats, selectedId as any);
 }
 
 async function callGroq(prompt: string, isQuick: boolean) {

@@ -91,10 +91,10 @@ function buildDynamicStructure(stats: UserStats): DayTemplate[] {
     const longRunDay = stats.longRunDay || "Sunday";
     const selectedRunDays = stats.selectedRunDays || [];
 
-    // Map day names to indices (0=Sunday, 6=Saturday) - Sunday first!
+    // Map day names to indices (0=Monday, 6=Sunday) - Monday first!
     const dayToIndex: Record<string, number> = {
-        "Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3,
-        "Thursday": 4, "Friday": 5, "Saturday": 6
+        "Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3,
+        "Friday": 4, "Saturday": 5, "Sunday": 6
     };
     const longRunIndex = dayToIndex[longRunDay];
 
@@ -108,7 +108,7 @@ function buildDynamicStructure(stats: UserStats): DayTemplate[] {
 
     // Build the 7-day week (Sunday to Saturday)
     const week: DayTemplate[] = [];
-    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     let workoutIndex = 0;
 
     for (let i = 0; i < 7; i++) {

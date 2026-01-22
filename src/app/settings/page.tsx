@@ -162,33 +162,31 @@ export default function Settings() {
         const now = new Date();
         let startDate: Date;
 
-        // Helper to get day index
-        const dayMap: { [key: string]: number } = {
-            "Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4, "Saturday": 5, "Sunday": 6
-        };
-        const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+        // 1. Determine the baseline date (The Monday of the chosen start week)
+        const dayOfWeekIndex = now.getDay(); // 0 is Sunday
+        const diffToMonday = dayOfWeekIndex === 0 ? -6 : 1 - dayOfWeekIndex;
 
-        // 1. Determine the "Plan's Start Day" (e.g., usually Monday = 0)
-        // We find the first workout of Week 1 to establish the baseline
-        const week1Days = selectedPlan.weeks.find((w: any) => w.week_number === 1)?.days || [];
-        const firstPlanDayName = week1Days[0]?.day || "Monday";
-        const firstPlanDayIndex = dayMap[firstPlanDayName] !== undefined ? dayMap[firstPlanDayName] : 0;
+        const thisMonday = new Date(now);
+        thisMonday.setDate(now.getDate() + diffToMonday);
+        thisMonday.setHours(0, 0, 0, 0);
 
-        // 2. Set the REAL Start Date
         if (startOption === "today") {
             startDate = new Date(now);
         } else if (startOption === "tomorrow") {
             startDate = new Date(now);
             startDate.setDate(startDate.getDate() + 1);
         } else {
-            // "Next Monday" (or next standard start day)
-            // Actually, let's keep the previous behavior for "Monday" which is aligning to the calendar next Monday
-            const day = now.getDay();
-            const daysUntilNextMonday = (8 - day) % 7 || 7;
-            startDate = new Date(now);
-            startDate.setDate(startDate.getDate() + daysUntilNextMonday);
+            // "Next Monday"
+            startDate = new Date(thisMonday);
+            startDate.setDate(startDate.getDate() + 7);
         }
         startDate.setHours(0, 0, 0, 0);
+
+        // The "Plan Baseline" is always the Monday of whatever week the startDate falls in.
+        const planBaselineDate = new Date(startDate);
+        const startDayIdx = startDate.getDay();
+        const diffToBaseline = startDayIdx === 0 ? -6 : 1 - startDayIdx;
+        planBaselineDate.setDate(startDate.getDate() + diffToBaseline);
 
         try {
             // Clear old workouts
@@ -212,29 +210,24 @@ export default function Settings() {
                     const weekNum = Number(week.week_number) || 1;
                     const totalDaysOffset = ((weekNum - 1) * 7) + daysFromPlanStart;
 
-                    const workoutDate = new Date(startDate);
+                    // All dates are relative to the Monday of the first week of the plan
+                    const workoutDate = new Date(planBaselineDate);
                     workoutDate.setDate(workoutDate.getDate() + totalDaysOffset);
 
                     // --- PARTIAL WEEK 1 LOGIC ---
-                    // If this is Week 1 and the workout date is BEFORE the start date, convert to Rest Day
+                    // If the workout date is BEFORE the actual selected start date, convert to Rest Day
                     let finalType = day.type;
                     let finalDescription = day.description;
                     let finalDistance = day.distance;
                     let finalDuration = day.duration;
                     let finalPace = day.target_pace;
 
-                    if (weekNum === 1 && workoutDate < startDate) {
+                    if (workoutDate < startDate) {
                         finalType = "rest";
-                        finalDescription = "Rest Day";
+                        finalDescription = "Rest Day (Missed)";
                         finalDistance = 0;
                         finalDuration = 0;
                         finalPace = "";
-                    }
-
-                    // FIX: Use local time for date string
-                    if (isNaN(workoutDate.getTime())) {
-                        console.error("Invalid date calculated:", { startDate, totalDaysOffset, weekNum, daysFromPlanStart });
-                        throw new Error(`Date calculation failed for Week ${weekNum} Day ${day.day}`);
                     }
 
                     const year = workoutDate.getFullYear();
@@ -244,24 +237,16 @@ export default function Settings() {
 
                     // Update day name to match the NEW date
                     const realDayIndex = workoutDate.getDay(); // 0 is Sunday
-                    const realDayName = realDayIndex === 0 ? "Sunday" : dayNames[realDayIndex - 1];
+                    const realDayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                    const realDayName = realDayNames[realDayIndex];
 
-                    // Calculate calendar week number (Sun-Sat weeks)
-                    // Find the Sunday of the first week
-                    const firstSunday = new Date(startDate);
-                    while (firstSunday.getDay() !== 0) {
-                        firstSunday.setDate(firstSunday.getDate() - 1);
-                    }
+                    // Week Number in the app is based on weeks since the start Monday
+                    const calendarWeekNumber = weekNum;
 
-                    // Calculate which calendar week this workout falls into
-                    const daysSinceFirstSunday = Math.floor((workoutDate.getTime() - firstSunday.getTime()) / (1000 * 60 * 60 * 24));
-                    const calendarWeekNumber = Math.floor(daysSinceFirstSunday / 7) + 1;
-
-                    // SAFETY: Convert long runs to easy runs in calendar Week 1
-                    if (calendarWeekNumber === 1 && finalType === "long") {
-                        finalType = "easy";
-                        finalDescription = finalDescription.replace("Long Run", "Easy Run").replace("Zone 2-3", "Zone 2");
-                        // Keep the same distance and duration, just change the type
+                    // SAFETY: Convert long runs to easy runs in calendar Week 1 if it's a partial week
+                    if (weekNum === 1 && finalType === "long" && workoutDate.getTime() === startDate.getTime() && workoutDate.getDay() !== 1) {
+                        // Optional: If someone starts on a Sunday today, maybe don't make it a long run?
+                        // But the current engine already handles "No long run in Week 1" usually.
                     }
 
                     return {

@@ -15,6 +15,8 @@ import { useData } from "@/context/DataContext";
 
 export default function Home() {
   const { session, profile, workouts, activities, isLoading, refreshData } = useData();
+  const [isPushing, setIsPushing] = useState(false);
+  const [pushSuccess, setPushSuccess] = useState(false);
 
   const calculateWeeklyStats = () => {
     const startOfCurrentWeek = startOfWeek(new Date(), { weekStartsOn: 1 });
@@ -64,6 +66,8 @@ export default function Home() {
 
   const handlePushWorkout = async () => {
     if (!todayWorkout) return;
+    setIsPushing(true);
+    setPushSuccess(false);
     try {
       const resp = await pushWorkoutAction({
         name: `${todayWorkout.type.toUpperCase()}: ${todayWorkout.description}`,
@@ -82,13 +86,16 @@ export default function Home() {
           .eq("id", todayWorkout.id);
 
         await refreshData();
-        alert("Workout pushed to Intervals.icu!");
+        setPushSuccess(true);
+        setTimeout(() => setPushSuccess(false), 3000);
       } else {
         alert("Failed to push to Intervals.icu (See console)");
       }
     } catch (err) {
       console.error(err);
       alert("Failed to push workout.");
+    } finally {
+      setIsPushing(false);
     }
   };
 
@@ -173,10 +180,32 @@ export default function Home() {
             {!todayWorkout.intervals_event_id ? (
               <button
                 onClick={handlePushWorkout}
-                className="w-full bg-primary text-black font-bold py-4 rounded-xl flex items-center justify-center space-x-2 neo-blue-glow active:scale-95 transition-all shadow-lg"
+                disabled={isPushing || pushSuccess}
+                className={`w-full font-bold py-4 rounded-xl flex items-center justify-center space-x-2 active:scale-95 transition-all shadow-lg ${pushSuccess
+                    ? 'bg-green-500 text-white'
+                    : 'bg-primary text-black neo-blue-glow'
+                  } disabled:opacity-70 disabled:cursor-not-allowed`}
               >
-                <CheckCircle2 className="w-5 h-5" />
-                <span className="uppercase tracking-widest text-sm text-black">Push Workout</span>
+                {isPushing ? (
+                  <>
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                      className="w-5 h-5 border-2 border-black border-t-transparent rounded-full"
+                    />
+                    <span className="uppercase tracking-widest text-sm">Pushing...</span>
+                  </>
+                ) : pushSuccess ? (
+                  <>
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span className="uppercase tracking-widest text-sm">Workout Pushed!</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span className="uppercase tracking-widest text-sm text-black">Push Workout</span>
+                  </>
+                )}
               </button>
             ) : (
               <button

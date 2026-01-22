@@ -48,31 +48,31 @@ interface DayTemplate {
 
 const WEEKLY_STRUCTURES: Record<string, DayTemplate[]> = {
     "beginner": [
-        { day: "Monday", type: "rest", intensity: "easy", distFactor: 0 },
-        { day: "Tuesday", type: "easy", intensity: "easy", distFactor: 0.25 },
-        { day: "Wednesday", type: "rest", intensity: "easy", distFactor: 0 },
+        { day: "Monday", type: "easy", intensity: "easy", distFactor: 0.25 }, // Started with a run!
+        { day: "Tuesday", type: "rest", intensity: "easy", distFactor: 0 },
+        { day: "Wednesday", type: "easy", intensity: "easy", distFactor: 0.15 },
         { day: "Thursday", type: "intervals", intensity: "high", distFactor: 0.25 },
         { day: "Friday", type: "rest", intensity: "easy", distFactor: 0 },
-        { day: "Saturday", type: "easy", intensity: "easy", distFactor: 0.15 },
+        { day: "Saturday", type: "rest", intensity: "easy", distFactor: 0 },
         { day: "Sunday", type: "long", intensity: "medium", distFactor: 0.35 },
     ],
     "intermediate": [
-        { day: "Monday", type: "rest", intensity: "easy", distFactor: 0 },
-        { day: "Tuesday", type: "easy", intensity: "easy", distFactor: 0.15 },
-        { day: "Wednesday", type: "intervals", intensity: "high", distFactor: 0.2 },
-        { day: "Thursday", type: "easy", intensity: "easy", distFactor: 0.1 },
+        { day: "Monday", type: "easy", intensity: "easy", distFactor: 0.15 }, // Started with a run!
+        { day: "Tuesday", type: "intervals", intensity: "high", distFactor: 0.2 },
+        { day: "Wednesday", type: "rest", intensity: "easy", distFactor: 0 },
+        { day: "Thursday", type: "easy", intensity: "easy", distFactor: 0.15 },
         { day: "Friday", type: "tempo", intensity: "medium", distFactor: 0.2 },
-        { day: "Saturday", type: "easy", intensity: "easy", distFactor: 0.1 },
-        { day: "Sunday", type: "long", intensity: "high", distFactor: 0.25 },
+        { day: "Saturday", type: "rest", intensity: "easy", distFactor: 0 },
+        { day: "Sunday", type: "long", intensity: "high", distFactor: 0.3 },
     ],
     "elite": [
         { day: "Monday", type: "easy", intensity: "easy", distFactor: 0.1 },
         { day: "Tuesday", type: "intervals", intensity: "high", distFactor: 0.15 },
         { day: "Wednesday", type: "easy", intensity: "easy", distFactor: 0.15 },
         { day: "Thursday", type: "tempo", intensity: "medium", distFactor: 0.2 },
-        { day: "Friday", type: "easy", intensity: "easy", distFactor: 0.1 },
-        { day: "Saturday", type: "easy", intensity: "easy", distFactor: 0.05 },
-        { day: "Sunday", type: "long", intensity: "high", distFactor: 0.25 },
+        { day: "Friday", type: "rest", intensity: "easy", distFactor: 0 },
+        { day: "Saturday", type: "easy", intensity: "easy", distFactor: 0.1 },
+        { day: "Sunday", type: "long", intensity: "high", distFactor: 0.15 },
     ],
 };
 

@@ -29,6 +29,8 @@ export default function AuthForm() {
             if (mode === "login") {
                 const { error } = await supabase.auth.signInWithPassword({ email, password });
                 if (error) throw error;
+                // Force a page refresh to ensure the middleware picks up the new session cookie
+                window.location.href = "/activities";
             } else {
                 const { error } = await supabase.auth.signUp({ email, password });
                 if (error) throw error;

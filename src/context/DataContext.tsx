@@ -10,6 +10,7 @@ interface DataContextType {
     session: any | null;
     workouts: any[];
     activities: any[];
+    activitiesError: string | null;
     isLoading: boolean;
     refreshData: () => Promise<void>;
 }
@@ -21,6 +22,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const [session, setSession] = useState<any | null>(null);
     const [workouts, setWorkouts] = useState<any[]>([]);
     const [activities, setActivities] = useState<any[]>([]);
+    const [activitiesError, setActivitiesError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchData = async (currentSession?: any) => {
@@ -62,7 +64,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 profileFound: !!profileRes.data,
                 profileOnboarded: profileRes.data?.onboarded,
                 workouts: workoutsRes.data?.length || 0,
-                activities: Array.isArray(activitiesRes) ? activitiesRes.length : 0
+                activities: activitiesRes?.data?.length || 0,
+                activitiesError: activitiesRes?.error
             });
 
             if (profileRes.data) setProfile(profileRes.data);
@@ -72,7 +75,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             }
 
             const fetchedWorkouts = workoutsRes.data || [];
-            const fetchedActivities = Array.isArray(activitiesRes) ? activitiesRes : [];
+            const fetchedActivities = activitiesRes?.data || [];
+            setActivitiesError(activitiesRes?.error || null);
 
             console.log('[DataContext] Updating state with fetched data...');
 
@@ -129,6 +133,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             session,
             workouts,
             activities,
+            activitiesError,
             isLoading,
             refreshData: () => fetchData()
         }}>

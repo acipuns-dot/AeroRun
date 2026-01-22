@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useData } from "@/context/DataContext";
 
 export default function Activities() {
-    const { activities, isLoading, refreshData } = useData();
+    const { activities, activitiesError, isLoading, refreshData } = useData();
     const [isSyncing, setIsSyncing] = useState(false);
 
     const handleSync = async () => {
@@ -39,6 +39,26 @@ export default function Activities() {
                     </button>
                 </div>
             </div>
+
+            {activitiesError && (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="mx-2 p-4 bg-red-400/10 border border-red-400/20 rounded-2xl flex items-start gap-4"
+                >
+                    <Activity className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                        <p className="text-xs font-black text-red-400 uppercase tracking-widest">Sync Failed</p>
+                        <p className="text-sm text-white/60 leading-relaxed">{activitiesError}</p>
+                        <Link
+                            href="/settings"
+                            className="inline-block text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-2 underline"
+                        >
+                            Verify Settings
+                        </Link>
+                    </div>
+                </motion.div>
+            )}
 
             {activities.length > 0 ? (
                 <div className="space-y-6">
@@ -90,11 +110,11 @@ export default function Activities() {
                         </Link>
                     ))}
                 </div>
-            ) : (
-                <div className="text-center py-20 bg-white/5 rounded-3xl border border-white/5 border-dashed">
+            ) : !activitiesError ? (
+                <div className="text-center py-20 bg-white/5 rounded-3xl border border-white/5 border-dashed mx-2">
                     <p className="text-white/40 font-medium">No activities found in Intervals.icu</p>
                 </div>
-            )}
+            ) : null}
 
             <BottomNav />
         </div>

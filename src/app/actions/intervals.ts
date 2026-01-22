@@ -42,7 +42,16 @@ export async function getActivitiesAction() {
     console.log('[Server Action] getActivitiesAction called');
 
     try {
-        const { athleteId, apiKey } = await getCredentials();
+        const credentials = await getCredentials().catch(err => {
+            console.error("[Server Action] Credential error:", err.message);
+            return null;
+        });
+
+        if (!credentials) {
+            return { data: [], error: "Intervals.icu credentials not configured. Please check your settings." };
+        }
+
+        const { athleteId, apiKey } = credentials;
 
         // Calculate date 6 months ago for the 'oldest' parameter
         const sixMonthsAgo = new Date();
@@ -63,24 +72,26 @@ export async function getActivitiesAction() {
             const errorText = await response.text();
             console.error(`[Server Action] API Error: ${response.status} ${response.statusText}`);
             console.error(`[Server Action] Error body:`, errorText);
-            return [];
+
+            if (response.status === 401) {
+                return { data: [], error: "Authentication failed. Please verify your API Key in Settings." };
+            }
+            if (response.status === 404) {
+                return { data: [], error: "Athlete not found. Please verify your Athlete ID in Settings." };
+            }
+            return { data: [], error: `Intervals.icu API Error: ${response.status}` };
         }
 
         const data = await response.json();
         console.log('[Server Action] Processed results:', {
             isArray: Array.isArray(data),
-            count: Array.isArray(data) ? data.length : 'N/A',
-            firstSample: Array.isArray(data) && data.length > 0 ? {
-                id: data[0].id,
-                name: data[0].name,
-                start_date: data[0].start_date
-            } : null
+            count: Array.isArray(data) ? data.length : 'N/A'
         });
 
-        return Array.isArray(data) ? data : [];
-    } catch (error) {
+        return { data: Array.isArray(data) ? data : [], error: null };
+    } catch (error: any) {
         console.error("[Server Action] Exception in getActivitiesAction:", error);
-        return [];
+        return { data: [], error: error.message || "Failed to fetch activities." };
     }
 }
 

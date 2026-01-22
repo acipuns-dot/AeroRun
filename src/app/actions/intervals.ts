@@ -15,7 +15,7 @@ const getHeaders = (apiKey: string) => {
 async function getCredentials() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) throw new Error("Authentication session expired. Please log in again.");
 
     const { data: profile, error } = await supabase
         .from("profiles")
@@ -23,13 +23,22 @@ async function getCredentials() {
         .eq("id", user.id)
         .single();
 
-    if (error || !profile?.intervals_api_key || !profile?.intervals_athlete_id) {
-        console.error("[getCredentials] Missing profile or credentials:", { error, hasApiKey: !!profile?.intervals_api_key, hasAthleteId: !!profile?.intervals_athlete_id });
-        throw new Error("Intervals.icu credentials not configured.");
+    if (error) {
+        console.error("[getCredentials] DB Error:", error);
+        throw new Error("Failed to load profile data.");
     }
 
-    // SANITIZATION: Remove any leading 'i' or non-numeric characters from Athlete ID
+    if (!profile?.intervals_api_key || !profile?.intervals_athlete_id) {
+        throw new Error("Intervals.icu credentials (ID or API Key) are missing in your profile.");
+    }
+
+    // SANITIZATION: Remove non-numeric characters from Athlete ID
     const sanitizedId = profile.intervals_athlete_id.replace(/\D/g, "");
+
+    if (!sanitizedId) {
+        throw new Error("Invalid Athlete ID format. It should contain numeric values.");
+    }
+
     console.log("[getCredentials] Sanitized Athlete ID:", { original: profile.intervals_athlete_id, sanitized: sanitizedId });
 
     return {
@@ -42,16 +51,15 @@ export async function getActivitiesAction() {
     console.log('[Server Action] getActivitiesAction called');
 
     try {
-        const credentials = await getCredentials().catch(err => {
-            console.error("[Server Action] Credential error:", err.message);
-            return null;
-        });
+        const credentialsResult = await getCredentials()
+            .then(creds => ({ credentials: creds, error: null }))
+            .catch(err => ({ credentials: null, error: err.message }));
 
-        if (!credentials) {
-            return { data: [], error: "Intervals.icu credentials not configured. Please check your settings." };
+        if (credentialsResult.error) {
+            return { data: [], error: credentialsResult.error };
         }
 
-        const { athleteId, apiKey } = credentials;
+        const { athleteId, apiKey } = credentialsResult.credentials!;
 
         // Calculate date 6 months ago for the 'oldest' parameter
         const sixMonthsAgo = new Date();

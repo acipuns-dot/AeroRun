@@ -175,12 +175,19 @@ export default function Settings() {
                     // If the plan has "unsorted" days, this might be negative, so we assume sorted input or handle it.
                     // But usually week 1 day 1 is the start.
                     // Add week offset
-                    const totalDaysOffset = ((week.week_number - 1) * 7) + daysFromPlanStart;
+                    // Add week offset
+                    const weekNum = Number(week.week_number) || 1;
+                    const totalDaysOffset = ((weekNum - 1) * 7) + daysFromPlanStart;
 
                     const workoutDate = new Date(startDate);
                     workoutDate.setDate(workoutDate.getDate() + totalDaysOffset);
 
                     // FIX: Use local time for date string
+                    if (isNaN(workoutDate.getTime())) {
+                        console.error("Invalid date calculated:", { startDate, totalDaysOffset, weekNum, daysFromPlanStart });
+                        throw new Error(`Date calculation failed for Week ${weekNum} Day ${day.day}`);
+                    }
+
                     const year = workoutDate.getFullYear();
                     const month = String(workoutDate.getMonth() + 1).padStart(2, '0');
                     const dayNum = String(workoutDate.getDate()).padStart(2, '0');

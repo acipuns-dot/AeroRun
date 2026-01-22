@@ -139,7 +139,7 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                     paceSec = paces.intervals;
                     targetPace = secondsToPace(paceSec);
                     const reps = stats.goal === "beginner" ? 6 : stats.goal === "intermediate" ? 10 : 15;
-                    description = `- 10m Warmup Pace: ${secondsToPace(paces.easy.max)}\n- ${reps}x 400m Pace: ${targetPace} 90s Recovery\n- 5m Cooldown Pace: ${secondsToPace(paces.easy.max)}`;
+                    description = `- 10m Warmup Pace: ${secondsToPace(paces.easy.max)}\n${reps}x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown Pace: ${secondsToPace(paces.easy.max)}`;
                     break;
                 case "tempo":
                     paceSec = paces.tempo.min;

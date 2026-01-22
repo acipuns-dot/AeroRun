@@ -54,10 +54,41 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             });
 
             if (profileRes.data) setProfile(profileRes.data);
-            else setProfile(null); // Explicitly set to null if not found
+            else setProfile(null);
 
-            if (workoutsRes.data) setWorkouts(workoutsRes.data);
-            if (Array.isArray(activitiesRes)) setActivities(activitiesRes);
+            const fetchedWorkouts = workoutsRes.data || [];
+            const fetchedActivities = Array.isArray(activitiesRes) ? activitiesRes : [];
+
+            // --- AUTO-SYNC COMPLETION ---
+            // If a workout is not marked completed but we have an activity on that day, mark it done!
+            const updatedWorkouts = [...fetchedWorkouts];
+            const workoutsToUpdate: string[] = [];
+
+            fetchedWorkouts.forEach((w: any) => {
+                if (!w.completed) {
+                    const hasActivity = fetchedActivities.some((a: any) => {
+                        const aDate = new Date(a.start_date_local || a.start_date).toISOString().split('T')[0];
+                        return aDate === w.date;
+                    });
+
+                    if (hasActivity) {
+                        w.completed = true;
+                        workoutsToUpdate.push(w.id);
+                    }
+                }
+            });
+
+            // Update local state immediately
+            setWorkouts(updatedWorkouts);
+            setActivities(fetchedActivities);
+
+            // Update database in the background if needed
+            if (workoutsToUpdate.length > 0) {
+                console.log(`[DataContext] Auto-marking ${workoutsToUpdate.length} workouts as completed...`);
+                supabase.from("workouts").update({ completed: true }).in("id", workoutsToUpdate).then(({ error }) => {
+                    if (error) console.error("[DataContext] Error auto-updating workouts:", error);
+                });
+            }
         } catch (err) {
             console.error("Error preloading data:", err);
         } finally {

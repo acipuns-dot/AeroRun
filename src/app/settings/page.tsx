@@ -33,6 +33,10 @@ export default function Settings() {
     const [targetDistance, setTargetDistance] = useState<"5km" | "10km" | "Half Marathon" | "Full Marathon">("5km");
     const [targetTime, setTargetTime] = useState("");
 
+    // User Schedule Preferences
+    const [daysPerWeek, setDaysPerWeek] = useState<3 | 4 | 5 | 6>(4);
+    const [longRunDay, setLongRunDay] = useState<"Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday">("Sunday");
+
     const router = useRouter();
 
     if (isLoading) return (
@@ -98,6 +102,8 @@ export default function Settings() {
                 goal: profile.training_level,
                 targetDistance,
                 targetTime: targetTime || undefined,
+                daysPerWeek,
+                longRunDay,
             });
 
             if (data.options) {
@@ -114,7 +120,7 @@ export default function Settings() {
 
     const handleSelectPlan = async (option: any) => {
         if (!profile) return;
-        setSaving(true); // Re-use saving state for full gen loader
+        setSaving(true);
         setSelectedPlanId(option.id);
 
         try {
@@ -127,6 +133,8 @@ export default function Settings() {
                     goal: profile.training_level,
                     targetDistance,
                     targetTime: targetTime || undefined,
+                    daysPerWeek,
+                    longRunDay,
                 },
                 option.id,
                 planOptions
@@ -312,6 +320,44 @@ export default function Settings() {
                             onChange={(e) => setTargetTime(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white focus:outline-none focus:border-primary transition-colors"
                         />
+                    </div>
+
+                    {/* Schedule Preferences */}
+                    <div className="space-y-4 glass p-6 border border-primary/20">
+                        <h3 className="text-sm font-black text-primary uppercase tracking-widest">Your Schedule</h3>
+
+                        {/* Days Per Week */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-black text-white/60 uppercase tracking-widest ml-1">Days Per Week</label>
+                            <div className="grid grid-cols-4 gap-2">
+                                {([3, 4, 5, 6] as const).map((days) => (
+                                    <button
+                                        key={days}
+                                        onClick={() => setDaysPerWeek(days)}
+                                        className={`py-3 rounded-lg font-black transition-all ${daysPerWeek === days
+                                            ? "bg-primary text-black"
+                                            : "bg-white/5 text-white/40 hover:bg-white/10"
+                                            }`}
+                                    >
+                                        {days}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Long Run Day */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-black text-white/60 uppercase tracking-widest ml-1">Long Run Day</label>
+                            <select
+                                value={longRunDay}
+                                onChange={(e) => setLongRunDay(e.target.value as any)}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white focus:outline-none focus:border-primary transition-colors"
+                            >
+                                {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => (
+                                    <option key={day} value={day} className="bg-black">{day}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
                     <button

@@ -78,9 +78,52 @@ const WEEKLY_STRUCTURES: Record<string, DayTemplate[]> = {
 
 // --- ENGINE ---
 
+function buildDynamicStructure(stats: UserStats): DayTemplate[] {
+    const daysPerWeek = stats.daysPerWeek || 4;
+    const longRunDay = stats.longRunDay || "Sunday";
+
+    // Map day names to indices (0=Monday, 6=Sunday)
+    const dayToIndex: Record<string, number> = {
+        "Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3,
+        "Friday": 4, "Saturday": 5, "Sunday": 6
+    };
+    const longRunIndex = dayToIndex[longRunDay];
+
+    // Base workout types based on level and days available
+    const workoutPriority: WorkoutType[] = stats.goal === "beginner"
+        ? ["long", "intervals", "easy", "easy"]
+        : stats.goal === "intermediate"
+            ? ["long", "intervals", "tempo", "easy", "easy"]
+            : ["long", "intervals", "tempo", "easy", "easy", "easy"];
+
+    // Build the 7-day week
+    const week: DayTemplate[] = [];
+    let workoutIndex = 0;
+
+    for (let i = 0; i < 7; i++) {
+        const dayName = `Day ${i + 1}`;
+
+        if (i === longRunIndex) {
+            // Long run day
+            week.push({ day: dayName, type: "long", intensity: "high", distFactor: 0.35 });
+        } else if (workoutIndex < daysPerWeek - 1) {
+            // Running day
+            const type = workoutPriority[workoutIndex] || "easy";
+            const distFactor = type === "intervals" ? 0.2 : type === "tempo" ? 0.2 : 0.15;
+            week.push({ day: dayName, type, intensity: type === "easy" ? "easy" : "high", distFactor });
+            workoutIndex++;
+        } else {
+            // Rest day
+            week.push({ day: dayName, type: "rest", intensity: "easy", distFactor: 0 });
+        }
+    }
+
+    return week;
+}
+
 export async function generateEnginePlan(stats: UserStats, variant: "steady" | "performance" | "health") {
     const paces = getCalculatedPaces(stats.best5kTime);
-    const structure = WEEKLY_STRUCTURES[stats.goal] || WEEKLY_STRUCTURES["intermediate"];
+    const structure = buildDynamicStructure(stats);
 
     // --- AMBITIOUS GOAL DETECTION ---
     const pbSec = paceToSeconds(stats.best5kTime);

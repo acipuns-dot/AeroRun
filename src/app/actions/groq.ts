@@ -19,6 +19,8 @@ export interface UserStats {
     goal: "beginner" | "intermediate" | "elite";
     targetDistance: "5km" | "10km" | "Half Marathon" | "Full Marathon";
     targetTime?: string;
+    daysPerWeek?: 3 | 4 | 5 | 6;
+    longRunDay?: "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
 }
 
 // --- PACING HELPERS ---

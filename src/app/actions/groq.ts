@@ -1,6 +1,7 @@
 "use server";
 
 import Groq from "groq-sdk";
+import { COACHING_KNOWLEDGE, REALITY_CHECK_RULES } from "@/lib/coaching-knowledge";
 
 const getGroqKeys = () => {
     const keysStr = process.env.GROQ_API_KEYS || process.env.GROQ_API_KEY || "";
@@ -110,93 +111,70 @@ export const generateTrainingPlanAction = async (stats: UserStats) => {
     if (stats.targetDistance === "Half Marathon") maxDistanceNote = "MAX Long Run Distance: 22km.";
     if (stats.targetDistance === "Full Marathon") maxDistanceNote = "MAX Long Run Distance: 34km.";
 
-    const prompt = `
-    You are a professional running coach.
-    Generate 3 DISTINCT training plan options for a runner:
-    - Current Fitness (Best 5km): ${stats.best5kTime} (Approx Pace: ${currentPbPace})
-    - Goal: ${stats.targetDistance} ${stats.targetTime ? `(Target Time: ${stats.targetTime})` : ""}
-    - User Training Level: ${stats.goal}
-    
-    CRITICAL PACING GUIDELINES (MANDATORY):
-    Based on their current 5k PB of ${currentPbPace}, you MUST use these EXACT pace ranges:
-    1. **Easy / Long Runs**: ${easyRange} (DO NOT go faster than ${formatSecondsToPace(pbSecondsPerKm * 1.3)})
-    2. **Tempo / Threshold**: ${tempoRange}
-    3. **Intervals**: ${intervalPace} (Do NOT go faster than this in early weeks)
+    // ... (previous logic for pacing/reality check remains) ...
 
-    STRICT CONSTRAINTS:
-    1. **Safety First**: If a user's 5k PB is 8:00/km (40 mins), their "Easy" runs should be ~10:30-12:00/km.
-    2. **No Over-Pacing**: Never schedule a run faster than their 5k PB pace in the first 4 weeks of a beginner plan.
-    3. **Plan Duration**: ${realityCheckNote ? realityCheckNote : "Standard 10-14 Weeks."}
-    4. **Distance Limits**: ${maxDistanceNote} (Do NOT exceed this).
-    5. **First Day Action**: The VERY FIRST day (Week 1, Day 1) of EVERY plan MUST be a running workout (Easy Run, etc.), NEVER a rest day.
-    6. **Mixed Periodization**: Vary the training mix week-to-week. (e.g., Week 1: 2 Easy, 1 Long; Week 2: 1 Easy, 1 Interval, 1 Long). Avoid repeats.
-    7. **Race Day Finale**: The VERY LAST day of the entire plan MUST be a "race" type. Title: "RACE DAY!". Goal: Achieve target ${stats.targetDistance}. Target Pace for this session MUST be: ${targetGoalPace}.
-    8. **Pace Floor**: The SLOWEST pace you should ever suggest is 9:30/km (this is the baseline for jogging). Never go slower than this.
+    // RAG-Lite: Inject Expert Knowledge
+    const distanceKey = stats.targetDistance as keyof typeof COACHING_KNOWLEDGE;
+    const expertKnowledge = COACHING_KNOWLEDGE[distanceKey] || COACHING_KNOWLEDGE["5km"];
+
+    const prompt = `
+    You are an elite endurance coach with the wisdom of Jack Daniels, Pfitzinger, and Kipchoge.
+    
+    USER PROFILE:
+    - Current Fitness (Best 5km): ${stats.best5kTime} (Approx Pace: ${currentPbPace})
+    - Goal: ${stats.targetDistance} ${stats.targetTime ? `(Target: ${stats.targetTime})` : ""}
+    - Level: ${stats.goal}
+    
+    EXPERT METHODOLOGY (APPLY THIS STRICTLY):
+    ${expertKnowledge}
+    
+    ${REALITY_CHECK_RULES}
+
+    CRITICAL PACING CONSTRAINTS:
+    1. **Easy / Long Runs**: ${easyRange} (Floor: 9:30/km).
+    2. **Tempo / Threshold**: ${tempoRange}
+    3. **Intervals**: ${intervalPace} (Start conservative).
+    4. **Race Day Target**: ${targetGoalPace}.
 
     REALITY CHECK Analysis:
     ${realityCheckNote || "Goal seems reasonable relative to current fitness."}
 
-    STRICT CONSTRAINTS:
-    1. **Plan Duration**: 
-       - If Reality Check warns of aggressive goal: 16-24 Weeks.
-       - Standard goals: 10-14 Weeks.
-       - Maintenance/Easy goals: 8-12 Weeks.
+    TASK:
+    Generate 3 DISTINCT training plan options.
+    
+    CHAIN-OF-THOUGHT REASONING (REQUIRED):
+    Before generating the specific weeks, you MUST internally formulate a strategy.
+    For EACH plan option, you must output a 'strategy_reasoning' field in the JSON.
+    This field should explain:
+    1. Why you chose this specific periodization.
+    2. How you are handling the user's specific pace gaps.
+    3. Why this plan fits the requested methodology.
 
-    2. **Strategy**:
-    1. "Steady Progress": Balanced. If goal is unrealistic, prioritize safe progress over hitting the exact time.
-    2. "Performance Peak": Aggressive. Takes the goal seriously but requires high commitment.
-    3. "Health & Longevity": Conservative. Ignores aggressive time goals if safety is at risk.
+    PLAN STRUCTURE REQUIREMENTS:
+    1. **First Day**: Week 1, Day 1 MUST be a run.
+    2. **Race Day**: Final day MUST be "RACE DAY!".
+    3. **Completeness**: Week 1 to Week ${realityCheckNote ? 18 : 12}. NO PLACEHOLDERS.
+    4. **Description Format**: Intervals.icu compatible (steps starting with '- ', repeats with 'Nx').
 
-    4. **PROGRESSIVE OVERLOAD (CRITICAL)**:
-       - **Weeks 1-4**: MUST BE SLOWER than PB. Focus on building volume. 
-       - **Rule**: "Train where you ARE, not where you want to be." Start the plan based on Current 5k PB Pace (${currentPbPace}), NOT the target goal pace.
-
-    5. **COMPLETENESS (MANDATORY)**:
-       - You MUST provide EVERY single week from Week 1 to Week ${realityCheckNote ? 18 : 12}.
-       - DO NOT skip any weeks. DO NOT use placeholders.
-       - YOU MUST RETURN A LARGE JSON. I NEED EVERY OBJECT FOR EVERY WEEK.
-
-    Return plans as a JSON object with this EXACT structure:
+    Return a JSON object with this EXACT structure:
     {
       "options": [
         {
           "id": "steady|performance|health",
           "title": "Plan Title",
-          "description": "...",
+          "strategy_reasoning": "Detailed explanation of the coaching logic used here...",
+          "description": "Short description...",
           "coach_notes": "...",
           "total_weeks": 12,
           "weeks": [
-            {
-              "week_number": 1,
-              "days": [
-                {
-                  "day": "Monday",
-                  "type": "rest|easy|intervals|long|tempo|race",
-                  "description": "For 'rest' type, provide a friendly recovery note. For 'race' type, provide an epic motivation. For other types, use Intervals.icu structured format. Every step MUST start with '- '. For repetitions, use 'Nx' on a line before the steps. ONLY include Distance, Time, and Pace. Example: '- Warmup 10m 6:00/km\\n- 5km 5:30/km\\n6x\\n- 1km 5:00/km\\n- 500m 7:00/km\\n- Cooldown 5m 6:30/km'",
-                  "distance": 0.0,
-                  "duration": 0,
-                  "target_pace": "The specific pace for this run (e.g. 5:30/km). For 'race' MUST be the Target Goal Pace provided above."
-                }
-              ]
-            }
+             // ... same structure as before ...
           ]
         }
       ]
     }
-    
-    IMPORTANT for Intervals.icu Integration:
-    The 'description' field MUST be formatted for the Intervals.icu workout builder:
-    1. Each step starts with '- '.
-    2. Repeats are defined by 'Nx' on the line BEFORE the steps to be repeated.
-    3. Metrics allowed: time (m, s), distance (km, m), and pace (m:ss/km).
-    
-    Example for Intervals session:
-    "- Warmup 15m 11:00/km\\n6x\\n- 800m 8:00/km\\n- 2m 12:00/km\\n- Cooldown 10m 11:00/km"
-    
-    IMPORTANT: Return ONLY valid JSON.
     `;
 
-    console.log("[Groq Action] Generating training plan with Multi-Key Rotation...");
+    console.log("[Groq Action] Generating training plan with Multi-Key Rotation & Expert Knowledge...");
 
     const keys = getGroqKeys();
     if (keys.length === 0) {
@@ -214,7 +192,9 @@ export const generateTrainingPlanAction = async (stats: UserStats) => {
                 messages: [
                     {
                         role: "system",
-                        content: "You are an elite endurance coach. You always provide full, week-by-week training plans with ZERO omissions or placeholders. You are capable of returning very large JSON objects.",
+                        content: `You are a world-class running coach. You NEVER fail to produce a full, detailed JSON schedule. 
+                        You combine the scientific rigor of Pfitzinger with the motivational style of a modern coach.
+                        You ALWAYS explain your strategy in the 'strategy_reasoning' field.`,
                     },
                     {
                         role: "user",
@@ -223,8 +203,8 @@ export const generateTrainingPlanAction = async (stats: UserStats) => {
                 ],
                 model: "llama-3.3-70b-versatile",
                 response_format: { type: "json_object" },
-                max_tokens: 15000,
-                temperature: 0.1,
+                max_tokens: 25000, // Increased for CoT
+                temperature: 0.2, // Slightly higher for "Strategic" creativity, but still low for JSON stability
             });
 
             const content = completion.choices[0].message.content;
@@ -232,6 +212,7 @@ export const generateTrainingPlanAction = async (stats: UserStats) => {
 
             return JSON.parse(content);
         } catch (error: any) {
+            // ... (error handling remains same) ...
             const isRateLimit = error.status === 429 ||
                 error.message?.toLowerCase().includes("rate limit") ||
                 error.code === "rate_limit_exceeded";

@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { generateTrainingPlanAction } from "@/app/actions/groq";
 import BottomNav from "@/components/BottomNav";
 import { motion } from "framer-motion";
-import { Settings as SettingsIcon, LogOut, User, RefreshCw, Ruler, Weight, Timer, Shield, Calendar as CalendarIcon, ArrowRight } from "lucide-react";
+import { Settings as SettingsIcon, LogOut, User, RefreshCw, Ruler, Weight, Timer, Shield, Calendar as CalendarIcon, ArrowRight, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useData } from "@/context/DataContext";
 import { getFutureEventsAction, deleteWorkoutAction } from "@/app/actions/intervals";
@@ -317,6 +317,15 @@ export default function Settings() {
                             </div>
 
                             <p className="text-sm text-white/80 leading-relaxed">{plan.description}</p>
+
+                            {plan.strategy_reasoning && (
+                                <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
+                                    <p className="text-[10px] text-primary/60 uppercase font-black mb-2 flex items-center gap-2">
+                                        <Sparkles className="w-3 h-3" /> AI Strategy
+                                    </p>
+                                    <p className="text-xs text-white/80 leading-relaxed italic">"{plan.strategy_reasoning}"</p>
+                                </div>
+                            )}
 
                             <div className="bg-white/5 p-4 rounded-xl border border-white/5">
                                 <p className="text-[10px] text-white/20 uppercase font-black mb-2">Coach Notes (Health)</p>

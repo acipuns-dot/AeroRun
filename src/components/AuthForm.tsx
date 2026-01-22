@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogIn, Mail, Lock, Zap, UserPlus } from "lucide-react";
@@ -50,9 +51,15 @@ export default function AuthForm() {
                 <div className="flex flex-col items-center space-y-2">
                     <motion.div
                         layoutId="logo-glow"
-                        className="bg-primary/20 p-4 rounded-2xl neo-blue-glow mb-2"
+                        className="bg-primary/5 p-1 rounded-3xl neo-blue-glow mb-4 overflow-hidden border border-primary/20"
                     >
-                        <Zap className="w-12 h-12 text-primary" />
+                        <Image
+                            src="/icons/icon-192x192.png"
+                            alt="AeroRun Logo"
+                            width={80}
+                            height={80}
+                            className="rounded-2xl"
+                        />
                     </motion.div>
                     <h1 className="text-4xl font-black tracking-tight text-white italic">
                         AERO<span className="text-primary not-italic">RUN</span>

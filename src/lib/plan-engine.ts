@@ -9,9 +9,22 @@ import { UserStats } from "@/app/actions/groq";
 
 // --- MATH UTILS ---
 
-function paceToSeconds(paceStr: string): number {
-    const parts = paceStr.split(":").map(Number);
-    return parts[0] * 60 + (parts[1] || 0);
+function paceToSeconds(timeStr: string): number {
+    if (!timeStr) return 0;
+    // Clean string: remove "Sub", "sub", spaces, etc.
+    const clean = timeStr.replace(/[Ss]ub/g, '').trim();
+    const parts = clean.split(":").map(Number);
+
+    if (parts.length === 3) {
+        // HH:MM:SS
+        return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
+    if (parts.length === 2) {
+        // MM:SS
+        return parts[0] * 60 + parts[1];
+    }
+    // Fallback if just a number (assume minutes)
+    return parts[0] * 60;
 }
 
 function secondsToPace(seconds: number): string {
@@ -163,20 +176,27 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
     const eqPaceSec = getEquivalentPace(stats.best5kTime, targetDistKm);
 
     // 2. Calculate the pace they WANT to run
-    // If no target time provided, we assume they want to slightly improve (2% faster than equivalent)
-    const goalPaceSec = targetSeconds ? targetSeconds / targetDistKm : eqPaceSec * 0.98;
+    // If no target time provided, we assume they want to improve (3% faster than equivalent)
+    const goalPaceSec = targetSeconds ? targetSeconds / targetDistKm : eqPaceSec * 0.97;
 
     // Gap: Positive = Goal is FASTER than their today-equivalent (ambitious)
     // Negative = Goal is SLOWER than their today-equivalent (conservative)
     const ambitiousPaceGap = eqPaceSec - goalPaceSec;
 
-    let totalWeeks = stats.targetDistance === "Full Marathon" ? 16 : 12;
+    // Base weeks by distance (Beginner-friendly scaling)
+    const baseWeeks: Record<string, number> = {
+        "5km": 12,
+        "10km": 14,
+        "Half Marathon": 16,
+        "Full Marathon": 18
+    };
 
-    // If goal pace is significantly faster than their today-equivalent, extend the plan
-    // for a safer build-up and more time for physiological adaptation.
-    if (ambitiousPaceGap > 25) { // Very ambitious (e.g. 25s/km faster than equivalent)
-        totalWeeks = 24;
-    } else if (ambitiousPaceGap > 10) { // Ambitious (e.g. 10s/km faster than equivalent)
+    let totalWeeks = baseWeeks[stats.targetDistance] || 12;
+
+    // If goal pace is faster than their today-equivalent, extend the plan
+    if (ambitiousPaceGap > 20) { // Very ambitious
+        totalWeeks = Math.max(totalWeeks, 24);
+    } else if (ambitiousPaceGap > 8) { // Ambitious (Catching more distance jumps)
         totalWeeks = stats.targetDistance === "Full Marathon" ? 22 : 18;
     }
 

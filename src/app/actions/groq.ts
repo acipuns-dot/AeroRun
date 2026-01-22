@@ -217,7 +217,18 @@ VOLUME PROGRESSION RULES :
     1. **First Day**: Week 1, Day 1 MUST be a run.
     2. **Race Day**: Final day MUST be "RACE DAY!".
     3. **Completeness**: Week 1 to Week ${realityCheckNote ? 18 : 12}. NO PLACEHOLDERS.
-    4. **Description Format**: Intervals.icu compatible (steps starting with '- ', repeats with 'Nx').
+    4. **Description Format (STRICT STRUCTURED SYNTAX)**: 
+       You MUST use the Intervals.icu Workout Builder syntax. Each line MUST be a step.
+       - Start each step with '- '
+       - Format: '- [Duration/Distance] [Type] [Title] [Pace/Effort]'
+       - Examples:
+         - '- 10m Warmup Pace: ${easyRange.split(' ')[0]}'
+         - '- 5km Easy Pace: ${easyRange}'
+         - '- 4x 400m 90s Recovery Pace: ${intervalPace}'
+         - '- 20m Tempo Pace: ${tempoRange}'
+         - '- 5m Cooldown'
+       - For Intervals: Use 'Nx' or 'Nx [step] [recovery]' format.
+       - NEVER use prose or loose bullet points. Only structured steps.
 
     Return a JSON object with this EXACT structure:
     {

@@ -103,22 +103,33 @@ export default function Onboarding({ onComplete }: { onComplete: (data: any) => 
                             animate={{ scale: 1, opacity: 1 }}
                             className="glass p-8 space-y-6 text-center"
                         >
-                            <h1 className="text-2xl font-bold">Choose your level</h1>
-                            <div className="grid grid-cols-1 gap-4">
-                                {["beginner", "intermediate", "elite"].map((lvl) => (
+                            <div className="space-y-1">
+                                <h1 className="text-2xl font-black italic uppercase tracking-tight">Level Up</h1>
+                                <p className="text-white/40 text-sm">Choose your current training experience</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-4 text-left">
+                                {[
+                                    { id: "beginner", title: "Beginner", desc: "New to running or returning after a break." },
+                                    { id: "intermediate", title: "Intermediate", desc: "Runs regularly and looking to step up." },
+                                    { id: "elite", title: "Elite", desc: "Experienced runner with competitive goals." }
+                                ].map((lvl) => (
                                     <button
-                                        key={lvl}
+                                        key={lvl.id}
                                         type="button"
                                         onClick={() => {
-                                            console.log("Setting level to:", lvl);
-                                            setFormData({ ...formData, level: lvl });
+                                            console.log("Setting level to:", lvl.id);
+                                            setFormData({ ...formData, level: lvl.id });
                                         }}
-                                        className={`p-4 rounded-xl border transition-all ${formData.level === lvl
-                                            ? "border-primary bg-primary/10 text-primary shadow-[0_0_10px_rgba(0,229,255,0.2)]"
-                                            : "border-white/10 hover:border-white/20 text-white/40"
-                                            } capitalize font-bold`}
+                                        className={`p-5 rounded-2xl border transition-all flex flex-col gap-1 ${formData.level === lvl.id
+                                            ? "border-primary bg-primary/10 text-primary shadow-[0_0_20px_rgba(0,229,255,0.1)]"
+                                            : "border-white/5 hover:border-white/10 bg-white/2"
+                                            } active:scale-98`}
                                     >
-                                        {lvl}
+                                        <span className="font-black uppercase tracking-widest text-sm">{lvl.title}</span>
+                                        <span className={`text-xs ${formData.level === lvl.id ? "text-primary/60" : "text-white/20"}`}>
+                                            {lvl.desc}
+                                        </span>
                                     </button>
                                 ))}
                             </div>
@@ -128,7 +139,7 @@ export default function Onboarding({ onComplete }: { onComplete: (data: any) => 
                                     console.log("Finishing onboarding with data:", formData);
                                     onComplete(formData);
                                 }}
-                                className="w-full bg-primary text-black font-bold py-4 rounded-xl flex items-center justify-center space-x-2 neo-blue-glow active:scale-95 transition-transform mt-4"
+                                className="w-full bg-primary text-black font-black italic py-4 rounded-xl flex items-center justify-center space-x-2 neo-blue-glow active:scale-95 transition-transform mt-4 uppercase tracking-widest"
                             >
                                 <span>Finish Setup</span>
                                 <ArrowRight className="w-5 h-5" />

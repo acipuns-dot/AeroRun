@@ -22,16 +22,24 @@ function secondsToPace(seconds: number): string {
 
 /**
  * Estimates training paces using a simplified VDOT model.
+ * Adjusted to prevent walking-pace recommendations.
  */
 function getCalculatedPaces(best5k: string) {
     const pbSec = paceToSeconds(best5k);
     const pbSecPerKm = pbSec / 5;
 
+    // Calculate base paces
+    const easyMin = pbSecPerKm * 1.25; // Reduced from 1.35
+    const easyMax = pbSecPerKm * 1.45; // Reduced from 1.55
+
+    // Cap easy pace at 9:30/km (570 seconds) to prevent walking pace
+    const cappedEasyMax = Math.min(easyMax, 570);
+
     return {
-        easy: { min: pbSecPerKm * 1.35, max: pbSecPerKm * 1.55 },
-        tempo: { min: pbSecPerKm * 1.12, max: pbSecPerKm * 1.18 },
+        easy: { min: easyMin, max: cappedEasyMax },
+        tempo: { min: pbSecPerKm * 1.10, max: pbSecPerKm * 1.15 }, // Tightened from 1.12-1.18
         intervals: pbSecPerKm * 0.98, // Slightly faster than 5k pace
-        long: { min: pbSecPerKm * 1.40, max: pbSecPerKm * 1.60 },
+        long: { min: pbSecPerKm * 1.30, max: Math.min(pbSecPerKm * 1.50, 570) }, // Reduced and capped
     };
 }
 

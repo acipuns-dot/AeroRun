@@ -24,22 +24,32 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchData = async (currentSession?: any) => {
-        console.log('[DataContext] fetchData called', { hasCurrentSession: !!currentSession });
-        const activeSession = currentSession || (await supabase.auth.getSession()).data.session;
-
-        if (!activeSession) {
-            setProfile(null);
-            setSession(null);
-            setWorkouts([]);
-            setActivities([]);
-            setIsLoading(false);
-            return;
-        }
-
-        setSession(activeSession);
+        console.log('[DataContext] fetchData - starting check...', {
+            hasCurrentSession: !!currentSession,
+            providedUserId: currentSession?.user?.id
+        });
 
         try {
-            console.log('[DataContext] Fetching data in parallel...');
+            const activeSession = currentSession || (await supabase.auth.getSession()).data.session;
+            console.log('[DataContext] fetchData - active session result:', {
+                hasSession: !!activeSession,
+                userId: activeSession?.user?.id,
+                email: activeSession?.user?.email
+            });
+
+            if (!activeSession) {
+                console.log('[DataContext] No session found, clearing state.');
+                setProfile(null);
+                setSession(null);
+                setWorkouts([]);
+                setActivities([]);
+                setIsLoading(false);
+                return;
+            }
+
+            setSession(activeSession);
+            console.log('[DataContext] Fetching profile, workouts, and activities...');
+
             // Fetch everything in parallel for maximum speed
             const [profileRes, workoutsRes, activitiesRes] = await Promise.all([
                 supabase.from("profiles").select("*").eq("id", activeSession.user.id).single(),
@@ -48,24 +58,24 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             ]);
 
             console.log('[DataContext] Data fetched:', {
-                profile: !!profileRes.data,
+                profileFound: !!profileRes.data,
+                profileOnboarded: profileRes.data?.onboarded,
                 workouts: workoutsRes.data?.length || 0,
                 activities: Array.isArray(activitiesRes) ? activitiesRes.length : 0
             });
 
             if (profileRes.data) setProfile(profileRes.data);
-            else setProfile(null);
+            else {
+                console.log('[DataContext] Profile not found in database for user:', activeSession.user.id);
+                setProfile(null);
+            }
 
             const fetchedWorkouts = workoutsRes.data || [];
             const fetchedActivities = Array.isArray(activitiesRes) ? activitiesRes : [];
 
-            console.log('[DataContext] Updating state with:', {
-                workoutsCount: fetchedWorkouts.length,
-                activitiesCount: fetchedActivities.length
-            });
+            console.log('[DataContext] Updating state with fetched data...');
 
             // --- AUTO-SYNC COMPLETION ---
-            // If a workout is not marked completed but we have an activity on that day, mark it done!
             const updatedWorkouts = [...fetchedWorkouts];
             const workoutsToUpdate: string[] = [];
 
@@ -83,11 +93,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 }
             });
 
-            // Update local state immediately
             setWorkouts(updatedWorkouts);
             setActivities(fetchedActivities);
 
-            // Update database in the background if needed
             if (workoutsToUpdate.length > 0) {
                 console.log(`[DataContext] Auto-marking ${workoutsToUpdate.length} workouts as completed...`);
                 supabase.from("workouts").update({ completed: true }).in("id", workoutsToUpdate).then(({ error }) => {
@@ -95,16 +103,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 });
             }
         } catch (err) {
-            console.error("Error preloading data:", err);
+            console.error("[DataContext] Error preloading data:", err);
         } finally {
+            console.log('[DataContext] Setting isLoading to false.');
             setIsLoading(false);
         }
     };
 
     useEffect(() => {
+        console.log('[DataContext] Initial mount - starting fetchData');
         fetchData();
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log('[DataContext] onAuthStateChange event:', event, { hasSession: !!session });
             fetchData(session);
         });
 

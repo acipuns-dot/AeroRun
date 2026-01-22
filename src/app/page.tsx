@@ -157,14 +157,31 @@ export default function Home() {
     }
   };
 
-  if (isLoading) return (
-    <div className="min-h-screen flex items-center justify-center bg-black">
-      <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
+  if (isLoading) {
+    console.log('[Home] Still loading...');
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
-  if (!session) return <AuthForm />;
-  if (!profile) return <Onboarding onComplete={handleOnboardingComplete} />;
+  console.log('[Home] Render decision:', {
+    hasSession: !!session,
+    hasProfile: !!profile,
+    userId: session?.user?.id,
+    profileOnboarded: profile?.onboarded
+  });
+
+  if (!session) {
+    console.log('[Home] No session -> Showing AuthForm');
+    return <AuthForm />;
+  }
+
+  if (!profile || !profile.onboarded) {
+    console.log('[Home] No profile or not onboarded -> Showing Onboarding');
+    return <Onboarding onComplete={handleOnboardingComplete} />;
+  }
 
   return (
     <div className="p-6 space-y-8 pb-32">

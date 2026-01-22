@@ -31,7 +31,6 @@ export default function Settings() {
     const [edit5kTime, setEdit5kTime] = useState("");
 
     const [targetDistance, setTargetDistance] = useState<"5km" | "10km" | "Half Marathon" | "Full Marathon">("5km");
-    const [targetTime, setTargetTime] = useState("");
 
     // User Schedule Preferences
     const [daysPerWeek, setDaysPerWeek] = useState<3 | 4 | 5 | 6>(4);
@@ -102,7 +101,6 @@ export default function Settings() {
                 best5kTime: profile.best_5k_time,
                 goal: profile.training_level,
                 targetDistance,
-                targetTime: targetTime || undefined,
                 daysPerWeek,
                 longRunDay,
                 selectedRunDays,
@@ -134,7 +132,6 @@ export default function Settings() {
                     best5kTime: profile.best_5k_time,
                     goal: profile.training_level,
                     targetDistance,
-                    targetTime: targetTime || undefined,
                     daysPerWeek,
                     longRunDay,
                     selectedRunDays,
@@ -320,16 +317,6 @@ export default function Settings() {
                         ))}
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-xs font-black text-white/40 uppercase tracking-widest ml-1">Target Time (Optional)</label>
-                        <input
-                            type="text"
-                            placeholder="e.g. Sub 20:00 or Sub 4:00:00"
-                            value={targetTime}
-                            onChange={(e) => setTargetTime(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white focus:outline-none focus:border-primary transition-colors"
-                        />
-                    </div>
 
                     {/* Schedule Preferences */}
                     <div className="space-y-4 glass p-6 border border-primary/20">

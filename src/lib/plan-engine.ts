@@ -46,7 +46,12 @@ function calculateVDOT(timeSec: number, distKm: number): number {
     const vo2 = -4.60 + 0.182258 * v + 0.000104 * Math.pow(v, 2);
     const f = 0.8 + 0.189439 * Math.exp(-0.012778 * t) + 0.298955 * Math.exp(-0.193260 * t);
 
-    return vo2 / f;
+    const vdot = vo2 / f;
+
+    // --- SAFETY CLAMPING ---
+    // VDOT 15: ~40 min 5k (Beginner)
+    // VDOT 85: World Class Elite
+    return Math.max(15, Math.min(85, vdot));
 }
 
 /**
@@ -89,7 +94,7 @@ function getCalculatedPacesFromVDOT(vdot: number) {
         easy: { min: easyMin, max: easyMax },
         tempo: { min: thresholdPace * 0.98, max: thresholdPace * 1.02 },
         intervals: intervalPace,
-        long: { min: easyMin, max: easyMax }, // Long runs are typically easy pace
+        long: { min: Math.max(easyMin, 240), max: easyMax }, // Ensure long runs aren't insanely fast (>4:00/km) for most
     };
 }
 

@@ -560,194 +560,151 @@ export default function Settings() {
             </div>
 
             {profile ? (
-                <div className="space-y-6">
-                    {/* Profile Card */}
-                    <div className="glass p-6 space-y-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div className="flex items-center space-x-4 min-w-0">
-                                <div className="bg-primary/20 p-3 rounded-full border border-primary/20 flex-shrink-0">
-                                    <User className="w-6 h-6 text-primary" />
-                                </div>
-                                <div className="min-w-0">
-                                    <h2 className="font-bold text-lg truncate">{profile.email}</h2>
-                                    <p className="text-xs text-white/40 uppercase font-black tracking-widest">{profile.training_level} RUNNER</p>
-                                </div>
+                <div className="space-y-8 mt-4">
+                    {/* Compact Profile Header */}
+                    <div className="flex items-center justify-between px-2">
+                        <div className="flex items-center space-x-4">
+                            <div className="bg-primary/10 p-4 rounded-2xl border border-primary/20 shadow-[0_0_20px_rgba(0,195,255,0.1)]">
+                                <User className="w-6 h-6 text-primary" />
                             </div>
-                            <div className="flex-shrink-0">
-                                {!isEditingProfile ? (
-                                    <button
-                                        onClick={startEditing}
-                                        className="w-full sm:w-auto text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/10 px-4 py-2 rounded-lg border border-primary/20 transition-all"
-                                    >
-                                        Edit Profile
-                                    </button>
-                                ) : (
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => setIsEditingProfile(false)}
-                                            className="flex-1 sm:flex-none text-[10px] font-black uppercase tracking-widest text-white/40 hover:bg-white/5 px-4 py-2 rounded-lg border border-white/10 transition-all"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={handleUpdateProfile}
-                                            disabled={saving}
-                                            className="flex-1 sm:flex-none text-[10px] font-black uppercase tracking-widest text-black bg-primary px-4 py-2 rounded-lg transition-all disabled:opacity-50"
-                                        >
-                                            {saving ? "..." : "Save"}
-                                        </button>
-                                    </div>
-                                )}
+                            <div>
+                                <h3 className="font-bold text-gray-200">{profile.email.split('@')[0]}</h3>
+                                <p className="text-[10px] text-primary uppercase font-black tracking-[0.2em]">{profile.training_level} RUNNER</p>
                             </div>
                         </div>
-
-                        <div className="grid grid-cols-3 gap-3">
-                            {isEditingProfile ? (
-                                <>
-                                    <div className="bg-white/5 p-3 rounded-xl">
-                                        <p className="text-[10px] text-white/20 uppercase font-black mb-1">Height (cm)</p>
-                                        <input
-                                            type="number"
-                                            value={editHeight}
-                                            onChange={(e) => setEditHeight(e.target.value)}
-                                            className="w-full bg-transparent text-primary font-bold text-center border-b border-primary/20 focus:outline-none focus:border-primary"
-                                        />
-                                    </div>
-                                    <div className="bg-white/5 p-3 rounded-xl">
-                                        <p className="text-[10px] text-white/20 uppercase font-black mb-1">Weight (kg)</p>
-                                        <input
-                                            type="number"
-                                            value={editWeight}
-                                            onChange={(e) => setEditWeight(e.target.value)}
-                                            className="w-full bg-transparent text-primary font-bold text-center border-b border-primary/20 focus:outline-none focus:border-primary"
-                                        />
-                                    </div>
-                                    <div className="bg-white/5 p-3 rounded-xl">
-                                        <p className="text-[10px] text-white/20 uppercase font-black mb-1">5K Time</p>
-                                        <input
-                                            type="text"
-                                            value={edit5kTime}
-                                            onChange={(e) => setEdit5kTime(e.target.value)}
-                                            placeholder="MM:SS"
-                                            className="w-full bg-transparent text-primary font-bold text-center border-b border-primary/20 focus:outline-none focus:border-primary"
-                                        />
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="bg-white/5 p-3 rounded-xl text-center">
-                                        <Ruler className="w-4 h-4 text-white/20 mx-auto mb-1" />
-                                        <p className="text-[10px] text-white/40 uppercase font-black tracking-widest">Height</p>
-                                        <p className="font-bold">{profile.height}cm</p>
-                                    </div>
-                                    <div className="bg-white/5 p-3 rounded-xl text-center">
-                                        <Weight className="w-4 h-4 text-white/20 mx-auto mb-1" />
-                                        <p className="text-[10px] text-white/40 uppercase font-black tracking-widest">Weight</p>
-                                        <p className="font-bold">{profile.weight}kg</p>
-                                    </div>
-                                    <div className="bg-white/5 p-3 rounded-xl text-center">
-                                        <Timer className="w-4 h-4 text-white/20 mx-auto mb-1" />
-                                        <p className="text-[10px] text-white/40 uppercase font-black tracking-widest">5K Time</p>
-                                        <p className="font-bold">{profile.best_5k_time}</p>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="space-y-3">
-                        <h3 className="text-xs font-black text-white/20 uppercase tracking-[0.2em] ml-2">Training Control</h3>
-                        <button
-                            onClick={() => setIsSelectingGoal(true)}
-                            className="w-full glass p-5 flex items-center justify-between group active:scale-98 transition-all"
-                        >
-                            <div className="flex items-center space-x-4">
-                                <div className="bg-primary/10 p-2 rounded-lg">
-                                    <RefreshCw className="w-5 h-5 text-primary" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="font-bold group-hover:text-primary transition-colors">Regenerate Plan</p>
-                                    <p className="text-xs text-white/40">Choose a new race goal & target time</p>
-                                </div>
-                            </div>
-                            <Shield className="w-4 h-4 text-white/20" />
-                        </button>
-                    </div>
-
-                    <div className="space-y-3 pt-6">
-                        <h3 className="text-xs font-black text-white/20 uppercase tracking-[0.2em] ml-2">Account</h3>
-                        <button
-                            onClick={handleLogout}
-                            className="w-full bg-red-500/10 border border-red-500/20 p-5 rounded-2xl flex items-center space-x-4 group active:scale-98 transition-all"
-                        >
-                            <div className="bg-red-500/10 p-2 rounded-lg">
-                                <LogOut className="w-5 h-5 text-red-500" />
-                            </div>
-                            <p className="font-bold text-red-500">Sign Out</p>
-                        </button>
-                    </div>
-
-                    <div className="space-y-3 pt-6 border-t border-white/5">
-                        <h3 className="text-xs font-black text-white/20 uppercase tracking-[0.2em] ml-2">Integrations</h3>
-                        <div className="glass p-6 flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                                <div className="bg-[#121212] p-3 rounded-xl border border-[#222]">
-                                    <img src="https://intervals.icu/favicon.ico" className="w-6 h-6 grayscale opacity-50" />
-                                </div>
-                                <div>
-                                    <h5 className="font-bold">Intervals.icu</h5>
-                                    <p className="text-xs text-white/40">Status: Connected</p>
-                                </div>
-                            </div>
+                        {!isEditingProfile ? (
                             <button
-                                onClick={handleSync}
-                                disabled={isSyncing}
-                                className="text-xs font-bold text-primary border border-primary/20 px-4 py-2 rounded-lg hover:bg-primary/10 active:scale-95 transition-all uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+                                onClick={startEditing}
+                                className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-primary transition-colors"
                             >
-                                {isSyncing ? "Syncing..." : "Sync Now"}
+                                Edit Profile
+                            </button>
+                        ) : (
+                            <div className="flex gap-4">
+                                <button onClick={() => setIsEditingProfile(false)} className="text-[10px] font-black uppercase tracking-[0.1em] text-white/40">Cancel</button>
+                                <button onClick={handleUpdateProfile} disabled={saving} className="text-[10px] font-black uppercase tracking-[0.1em] text-primary">Save</button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Metrics Bar */}
+                    <div className="glass p-1 rounded-2xl flex divide-x divide-white/5 mx-2">
+                        {isEditingProfile ? (
+                            <>
+                                <div className="flex-1 p-3">
+                                    <p className="text-[8px] text-white/20 uppercase font-black mb-1">Height</p>
+                                    <input type="number" value={editHeight} onChange={(e) => setEditHeight(e.target.value)} className="w-full bg-transparent text-primary font-bold text-sm focus:outline-none" />
+                                </div>
+                                <div className="flex-1 p-3">
+                                    <p className="text-[8px] text-white/20 uppercase font-black mb-1">Weight</p>
+                                    <input type="number" value={editWeight} onChange={(e) => setEditWeight(e.target.value)} className="w-full bg-transparent text-primary font-bold text-sm focus:outline-none" />
+                                </div>
+                                <div className="flex-1 p-3">
+                                    <p className="text-[8px] text-white/20 uppercase font-black mb-1">5K Time</p>
+                                    <input type="text" value={edit5kTime} onChange={(e) => setEdit5kTime(e.target.value)} className="w-full bg-transparent text-primary font-bold text-sm focus:outline-none" />
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex-1 p-4 text-center">
+                                    <p className="text-[9px] text-white/20 uppercase font-black mb-1 tracking-widest">Height</p>
+                                    <p className="font-bold text-sm">{profile.height}<span className="text-[9px] ml-1 opacity-20">cm</span></p>
+                                </div>
+                                <div className="flex-1 p-4 text-center">
+                                    <p className="text-[9px] text-white/20 uppercase font-black mb-1 tracking-widest">Weight</p>
+                                    <p className="font-bold text-sm">{profile.weight}<span className="text-[9px] ml-1 opacity-20">kg</span></p>
+                                </div>
+                                <div className="flex-1 p-4 text-center">
+                                    <p className="text-[9px] text-white/20 uppercase font-black mb-1 tracking-widest">5K Time</p>
+                                    <p className="font-bold text-sm">{profile.best_5k_time}</p>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Unified Management List */}
+                    <div className="space-y-2">
+                        <div className="mx-2 mb-2">
+                            <h3 className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">Management</h3>
+                        </div>
+                        <div className="glass rounded-3xl overflow-hidden divide-y divide-white/5 mx-2 border-white/5">
+                            {/* Regenerate Plan */}
+                            <button
+                                onClick={() => setIsSelectingGoal(true)}
+                                className="w-full p-6 flex items-center justify-between hover:bg-white/5 transition-all group"
+                            >
+                                <div className="flex items-center space-x-4">
+                                    <div className="bg-primary/5 p-3 rounded-xl group-hover:bg-primary/10 transition-colors">
+                                        <RefreshCw className="w-5 h-5 text-primary" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="font-bold text-sm">Regenerate Plan</p>
+                                        <p className="text-[10px] text-white/40">Change your goal or schedule</p>
+                                    </div>
+                                </div>
+                                <ArrowRight className="w-4 h-4 text-white/10 group-hover:text-primary transition-all" />
+                            </button>
+
+                            {/* Intervals Sync */}
+                            <div className="p-6 flex items-center justify-between group">
+                                <div className="flex items-center space-x-4 text-left">
+                                    <div className="bg-[#121212] p-3 rounded-xl border border-white/5 group-hover:border-primary/20 transition-colors">
+                                        <img src="https://intervals.icu/favicon.ico" className="w-5 h-5 grayscale opacity-50 contrast-125" />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="font-bold text-sm">Intervals.icu</p>
+                                        <p className="text-[10px] text-white/40">Status: <span className="text-green-500/60">Connected</span></p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={handleSync}
+                                    disabled={isSyncing}
+                                    className="text-[10px] font-black text-primary border border-primary/20 px-4 py-2 rounded-lg hover:bg-primary/10 transition-all uppercase disabled:opacity-50"
+                                >
+                                    {isSyncing ? "Syncing..." : "Sync Now"}
+                                </button>
+                            </div>
+
+                            {/* Sign Out */}
+                            <button
+                                onClick={handleLogout}
+                                className="w-full p-6 flex items-center justify-between hover:bg-red-500/5 transition-all group"
+                            >
+                                <div className="flex items-center space-x-4">
+                                    <div className="bg-red-500/5 p-3 rounded-xl group-hover:bg-red-500/10 transition-colors">
+                                        <LogOut className="w-5 h-5 text-red-500" />
+                                    </div>
+                                    <p className="font-bold text-sm text-red-500/80">Sign Out</p>
+                                </div>
                             </button>
                         </div>
                     </div>
 
-                    <div className="space-y-3 pt-6 border-t border-white/5">
-                        <h3 className="text-xs font-black text-red-500/50 uppercase tracking-[0.2em] ml-2">Danger Zone</h3>
+                    {/* Danger Zone (Subtle) */}
+                    <div className="pt-12 pb-4 text-center space-y-4">
                         <button
                             onClick={async () => {
                                 if (confirm("ARE YOU SURE? This will delete ALL local workouts AND clear future planned workouts from Intervals.icu.")) {
                                     setSaving(true);
                                     try {
-                                        // 1. Clear Intervals.icu
-                                        try {
-                                            const events = await getFutureEventsAction();
-                                            if (Array.isArray(events)) {
-                                                const deletePromises = events
-                                                    .filter((e: any) => e.category === 'WORKOUT') // Ensure we only delete workouts, not races/notes
-                                                    .map((e: any) => deleteWorkoutAction(e.id));
-                                                await Promise.all(deletePromises);
-                                            }
-                                        } catch (err) {
-                                            console.error("Failed to clear Intervals.icu data:", err);
+                                        const events = await getFutureEventsAction();
+                                        if (Array.isArray(events)) {
+                                            const deletePromises = events.filter((e: any) => e.category === 'WORKOUT').map((e: any) => deleteWorkoutAction(e.id));
+                                            await Promise.all(deletePromises);
                                         }
-
-                                        // 2. Clear Local DB
                                         const { error } = await supabase.from("workouts").delete().eq("user_id", profile.id);
                                         if (error) throw error;
-
                                         await refreshData();
-                                        alert("All data cleared from App & Intervals.icu!");
+                                        alert("All data cleared!");
                                     } catch (e) {
                                         console.error(e);
-                                        alert("Failed to clear data.");
                                     }
                                     setSaving(false);
                                 }
                             }}
-                            disabled={saving}
-                            className="w-full bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex items-center justify-between group active:scale-98 transition-all hover:bg-red-500/20"
+                            className="text-[10px] font-black text-white/10 hover:text-red-500/40 transition-colors uppercase tracking-[0.3em]"
                         >
-                            <span className="font-black text-red-500 text-sm">RESET ALL DATA</span>
-                            {saving ? <RefreshCw className="w-4 h-4 text-red-500 animate-spin" /> : <Shield className="w-4 h-4 text-red-500" />}
+                            Reset All Training Data
                         </button>
                     </div>
                 </div>

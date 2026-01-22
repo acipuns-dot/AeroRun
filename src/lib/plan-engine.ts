@@ -213,20 +213,32 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                     break;
 
                 case "long":
-                    paceSec = paces.long.min;
-                    targetPace = secondsToPace(paces.long.min);
-                    hrZone = "Zone 2-3";
-
-                    // Race Specificity (Point 1)
-                    if (stats.targetDistance === "Full Marathon" || stats.targetDistance === "Half Marathon") {
-                        if (w > 6 && !isTaper && w % 2 === 0) {
-                            // Fast Finish Long Run
-                            description = `- ${Math.round(finalDist * 10) / 10}km Long Run\n- First 70% Easy Pace: ${targetPace}\n- Last 30% @ Goal Race Pace\n- HR: Zone 2 -> Zone 3`;
-                        } else {
-                            description = `- ${Math.round(finalDist * 10) / 10}km Steady Long Run Pace: ${targetPace}\n- HR: ${hrZone}`;
-                        }
+                    // Week 1 Safety: Never do a long run in Week 1!
+                    if (w === 1) {
+                        // Convert to easy run for Week 1
+                        const easyRange = paces.easy.max - paces.easy.min;
+                        const dayIndex = structure.indexOf(t);
+                        const variation = (dayIndex % 3) * 0.33;
+                        paceSec = paces.easy.min + (easyRange * variation);
+                        targetPace = secondsToPace(paceSec);
+                        hrZone = "Zone 2";
+                        description = `- ${Math.round(finalDist * 10) / 10}km Easy Run Pace: ${targetPace}\n- HR: ${hrZone} (Conversation Pace)`;
                     } else {
-                        description = `- ${Math.round(finalDist * 10) / 10}km Long Run Pace: ${targetPace}\n- HR: ${hrZone}`;
+                        paceSec = paces.long.min;
+                        targetPace = secondsToPace(paces.long.min);
+                        hrZone = "Zone 2-3";
+
+                        // Race Specificity (Point 1)
+                        if (stats.targetDistance === "Full Marathon" || stats.targetDistance === "Half Marathon") {
+                            if (w > 6 && !isTaper && w % 2 === 0) {
+                                // Fast Finish Long Run
+                                description = `- ${Math.round(finalDist * 10) / 10}km Long Run\n- First 70% Easy Pace: ${targetPace}\n- Last 30% @ Goal Race Pace\n- HR: Zone 2 -> Zone 3`;
+                            } else {
+                                description = `- ${Math.round(finalDist * 10) / 10}km Steady Long Run Pace: ${targetPace}\n- HR: ${hrZone}`;
+                            }
+                        } else {
+                            description = `- ${Math.round(finalDist * 10) / 10}km Long Run Pace: ${targetPace}\n- HR: ${hrZone}`;
+                        }
                     }
                     break;
 

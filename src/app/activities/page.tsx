@@ -10,7 +10,14 @@ import Link from "next/link";
 import { useData } from "@/context/DataContext";
 
 export default function Activities() {
-    const { activities, isLoading } = useData();
+    const { activities, isLoading, refreshData } = useData();
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const handleSync = async () => {
+        setIsSyncing(true);
+        await refreshData();
+        setIsSyncing(false);
+    };
 
     if (isLoading) return (
         <div className="min-h-screen flex items-center justify-center bg-black">
@@ -22,8 +29,14 @@ export default function Activities() {
         <div className="p-6 space-y-8 pb-32">
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-black italic">ACTIVITIES</h1>
-                <div className="bg-white/5 p-2 rounded-full border border-white/10">
-                    <Activity className="w-5 h-5 text-primary" />
+                <div className="flex items-center space-x-2">
+                    <button
+                        onClick={handleSync}
+                        disabled={isSyncing}
+                        className={`bg-white/5 p-2 rounded-full border border-white/10 hover:bg-white/10 transition-all ${isSyncing ? "animate-spin" : ""}`}
+                    >
+                        <Activity className={`w-5 h-5 ${isSyncing ? "text-primary/50" : "text-primary"}`} />
+                    </button>
                 </div>
             </div>
 

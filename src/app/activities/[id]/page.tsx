@@ -49,25 +49,41 @@ export default function ActivityDetail() {
 
                 // Fetch GPS data
                 console.log('[ActivityDetail] Fetching streams for:', activityId);
-                const streams = await getActivityStreamsAction(activityId);
-                console.log('[ActivityDetail] Streams received:', streams ? 'yes' : 'no');
+                try {
+                    const streams = await getActivityStreamsAction(activityId);
+                    console.log('[ActivityDetail] Streams received:', streams ? 'yes' : 'no');
 
-                if (streams && Array.isArray(streams)) {
-                    const latlngStream = streams.find((s: any) => s.type === "latlng");
-                    console.log('[ActivityDetail] LatLng stream found:', latlngStream ? 'yes' : 'no');
-                    if (latlngStream && latlngStream.data && latlngStream.data2) {
-                        console.log('[ActivityDetail] LatLng data points:', latlngStream.data.length);
-                        // Intervals.icu format: data = [lats], data2 = [lngs]
-                        const zippedCoords: [number, number][] = latlngStream.data.map((lat: number, i: number) => {
-                            return [lat, latlngStream.data2[i]];
-                        });
-                        setCoordinates(zippedCoords);
-                    } else if (latlngStream && latlngStream.data) {
-                        // Plan B: In case some activities return [lat, lng] pairs in data
-                        if (Array.isArray(latlngStream.data[0])) {
+                    if (streams && Array.isArray(streams)) {
+                        const latlngStream = streams.find((s: any) => s.type === "latlng");
+                        console.log('[ActivityDetail] LatLng stream found:', latlngStream ? 'yes' : 'no');
+
+                        if (latlngStream && latlngStream.data && latlngStream.data2) {
+                            console.log('[ActivityDetail] LatLng data points (lat/lng):', latlngStream.data.length, latlngStream.data2.length);
+
+                            // Robust zipping with validation
+                            const zippedCoords: [number, number][] = [];
+                            const len = Math.min(latlngStream.data.length, latlngStream.data2.length);
+
+                            for (let i = 0; i < len; i++) {
+                                const lat = latlngStream.data[i];
+                                const lng = latlngStream.data2[i];
+                                // Only add if both are valid numbers
+                                if (typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng)) {
+                                    zippedCoords.push([lat, lng]);
+                                }
+                            }
+
+                            console.log('[ActivityDetail] Valid coordinates extracted:', zippedCoords.length);
+                            if (zippedCoords.length > 0) {
+                                setCoordinates(zippedCoords);
+                            }
+                        } else if (latlngStream && Array.isArray(latlngStream.data) && Array.isArray(latlngStream.data[0])) {
+                            // Plan B: Data is already zipped
                             setCoordinates(latlngStream.data);
                         }
                     }
+                } catch (err) {
+                    console.error('[ActivityDetail] Error fetching or processing streams:', err);
                 }
             }
         };

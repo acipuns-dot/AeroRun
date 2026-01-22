@@ -21,8 +21,14 @@ function ChangeView({ coordinates }: { coordinates: [number, number][] }) {
     const map = useMap();
     useEffect(() => {
         if (coordinates.length > 0) {
-            const bounds = L.latLngBounds(coordinates);
-            map.fitBounds(bounds, { padding: [20, 20] });
+            try {
+                const bounds = L.latLngBounds(coordinates);
+                if (bounds.isValid()) {
+                    map.fitBounds(bounds, { padding: [20, 20] });
+                }
+            } catch (e) {
+                console.error("Leaflet fitBounds error:", e);
+            }
         }
     }, [coordinates, map]);
     return null;

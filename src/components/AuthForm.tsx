@@ -29,7 +29,7 @@ export default function AuthForm() {
     };
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background">
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-transparent">
             <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}

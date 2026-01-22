@@ -55,7 +55,7 @@ export default function Onboarding({ onComplete }: { onComplete: (data: any) => 
     const currentStepData = steps[step - 1];
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background">
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-transparent">
             <div className="w-full max-w-md">
                 <div className="mb-8 flex space-x-2">
                     {[1, 2, 3, 4, 5].map((s) => (

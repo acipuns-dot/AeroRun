@@ -22,4 +22,5 @@ export type Workout = {
     target_pace: string;
     date: string;
     intervals_event_id?: string;
+    structured_workout?: string;
 };

@@ -302,8 +302,10 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
             const taperDistFactor = isTaper ? 0.6 : 1.0;
             const finalDist = t.type === "long" || t.type === "easy" ? dist * taperDistFactor : dist;
 
+            let structuredWorkout = "";
+
             switch (t.type) {
-                case "easy":
+                case "easy": {
                     // Add variety: vary pace within the easy range based on day index
                     const easyRange = weeklyPaces.easy.max - weeklyPaces.easy.min;
                     const dayIndex = structure.indexOf(t);
@@ -312,9 +314,11 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                     targetPace = secondsToPace(paceSec);
                     hrZone = "Zone 2";
                     description = `- ${Math.round(finalDist * 10) / 10}km Easy Run Pace: ${targetPace}\n- HR: ${hrZone} (Conversation Pace)`;
+                    structuredWorkout = `Warmup\n- ${Math.round(finalDist * 10) / 10}km ${targetPace}`;
                     break;
+                }
 
-                case "long":
+                case "long": {
                     // Week 1 Safety: Never do a long run in Week 1!
                     if (w === 1) {
                         // Convert to easy run for Week 1
@@ -325,6 +329,7 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                         targetPace = secondsToPace(paceSec);
                         hrZone = "Zone 2";
                         description = `- ${Math.round(finalDist * 10) / 10}km Easy Run Pace: ${targetPace}\n- HR: ${hrZone} (Conversation Pace)`;
+                        structuredWorkout = `Warmup\n- ${Math.round(finalDist * 10) / 10}km ${targetPace}`;
                     } else {
                         paceSec = weeklyPaces.long.min;
                         targetPace = secondsToPace(weeklyPaces.long.min);
@@ -335,16 +340,24 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                             if (w > 6 && !isTaper && w % 2 === 0) {
                                 // Fast Finish Long Run
                                 description = `- ${Math.round(finalDist * 10) / 10}km Long Run\n- First 70% Easy Pace: ${targetPace}\n- Last 30% @ Goal Race Pace\n- HR: Zone 2 -> Zone 3`;
+
+                                const easyDist = Math.round(finalDist * 0.7 * 10) / 10;
+                                const raceDist = Math.round((finalDist - easyDist) * 10) / 10;
+                                const racePace = secondsToPace(paceSec * 0.95); // Approximation of race pace
+                                structuredWorkout = `Warmup\n- ${easyDist}km ${targetPace}\n\nMain Set\n- ${raceDist}km ${racePace}`;
                             } else {
                                 description = `- ${Math.round(finalDist * 10) / 10}km Steady Long Run Pace: ${targetPace}\n- HR: ${hrZone}`;
+                                structuredWorkout = `Warmup\n- ${Math.round(finalDist * 10) / 10}km ${targetPace}`;
                             }
                         } else {
                             description = `- ${Math.round(finalDist * 10) / 10}km Long Run Pace: ${targetPace}\n- HR: ${hrZone}`;
+                            structuredWorkout = `Warmup\n- ${Math.round(finalDist * 10) / 10}km ${targetPace}`;
                         }
                     }
                     break;
+                }
 
-                case "intervals":
+                case "intervals": {
                     // Week 1 Safety: No intervals in Week 1
                     if (w === 1) {
                         const easyRange = weeklyPaces.easy.max - weeklyPaces.easy.min;
@@ -354,6 +367,7 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                         targetPace = secondsToPace(paceSec);
                         hrZone = "Zone 2";
                         description = `- ${Math.round(finalDist * 10) / 10}km Easy Run (Intro) Pace: ${targetPace}\n- HR: ${hrZone}`;
+                        structuredWorkout = `Warmup\n- ${Math.round(finalDist * 10) / 10}km ${targetPace}`;
                     } else {
                         paceSec = weeklyPaces.intervals * paceSharpening;
                         targetPace = secondsToPace(paceSec);
@@ -364,21 +378,29 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                         let reps = stats.goal === "beginner" ? 6 : stats.goal === "intermediate" ? 8 : 12;
                         reps = Math.round(reps * workoutScale);
 
+                        const warmPace = secondsToPace(weeklyPaces.easy.max);
+
                         if (isSpeedDay) {
                             // VO2 Max Focus
-                            description = `- 10m Warmup Pace: ${secondsToPace(weeklyPaces.easy.max)}\n${reps}x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown Pace: ${secondsToPace(weeklyPaces.easy.max)}\n- HR: ${hrZone}`;
+                            description = `- 10m Warmup Pace: ${warmPace}\n${reps}x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown Pace: ${warmPace}\n- HR: ${hrZone}`;
+                            structuredWorkout = `Warmup\n- 10m ${warmPace}\n\nMain Set ${reps}x\n- 400m ${targetPace}\n- 90s recovery\n\nCooldown\n- 5m ${warmPace}`;
                         } else {
                             // Threshold Intevals for HM/FM
                             const repDist = "1km"; // Simplified block for stability
                             const adjReps = Math.max(3, Math.round(reps * 0.5)); // Fewer reps for longer distance
                             const threshPace = secondsToPace(weeklyPaces.tempo.max * paceSharpening);
-                            description = `- 10m Warmup Pace: ${secondsToPace(weeklyPaces.easy.max)}\n${adjReps}x\n- ${repDist} Pace: ${threshPace}\n- 2m Recovery\n- 5m Cooldown\n- HR: Zone 4 (Threshold)`;
+                            description = `- 10m Warmup Pace: ${warmPace}\n${adjReps}x\n- ${repDist} Pace: ${threshPace}\n- 2m Recovery\n- 5m Cooldown\n- HR: Zone 4 (Threshold)`;
+                            structuredWorkout = `Warmup\n- 10m ${warmPace}\n\nMain Set ${adjReps}x\n- ${repDist} ${threshPace}\n- 2m recovery\n\nCooldown\n- 5m ${warmPace}`;
                         }
-                        if (isTaper) description = `- 10m Warmup\n4x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown`; // Sharp taper
+                        if (isTaper) {
+                            description = `- 10m Warmup\n4x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown`; // Sharp taper
+                            structuredWorkout = `Warmup\n- 10m ${warmPace}\n\nMain Set 4x\n- 400m ${targetPace}\n- 90s recovery\n\nCooldown\n- 5m ${warmPace}`;
+                        }
                     }
                     break;
+                }
 
-                case "tempo":
+                case "tempo": {
                     // Week 1 Safety: No tempo in Week 1
                     if (w === 1) {
                         const easyRange = weeklyPaces.easy.max - weeklyPaces.easy.min;
@@ -388,19 +410,23 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                         targetPace = secondsToPace(paceSec);
                         hrZone = "Zone 2";
                         description = `- ${Math.round(finalDist * 10) / 10}km Easy Run (Intro) Pace: ${targetPace}\n- HR: ${hrZone}`;
+                        structuredWorkout = `Warmup\n- ${Math.round(finalDist * 10) / 10}km ${targetPace}`;
                     } else {
                         paceSec = weeklyPaces.tempo.min * paceSharpening;
                         targetPace = secondsToPace(paceSec);
                         hrZone = "Zone 3-4";
                         const tempoDist = Math.max(3, Math.round(finalDist * 0.75 * workoutScale));
+                        const easyPace = secondsToPace(weeklyPaces.easy.max);
 
-                        description = `- 2km Warmup Pace: ${secondsToPace(weeklyPaces.easy.max)}\n- ${tempoDist}km Tempo Pace: ${targetPace}\n- 2km Cooldown Pace: ${secondsToPace(weeklyPaces.easy.max)}\n- HR: ${hrZone} (Comfortably Hard)`;
+                        description = `- 2km Warmup Pace: ${easyPace}\n- ${tempoDist}km Tempo Pace: ${targetPace}\n- 2km Cooldown Pace: ${easyPace}\n- HR: ${hrZone} (Comfortably Hard)`;
+                        structuredWorkout = `Warmup\n- 2km ${easyPace}\n\nMain Set\n- ${tempoDist}km ${targetPace}\n\nCooldown\n- 2km ${easyPace}`;
                     }
                     break;
-
+                }
 
                 case "rest":
                     description = "Rest Day";
+                    structuredWorkout = "";
                     break;
             }
 
@@ -428,7 +454,8 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                 description,
                 distance: dist,
                 duration,
-                target_pace: targetPace
+                target_pace: targetPace,
+                structured_workout: structuredWorkout
             };
         });
 

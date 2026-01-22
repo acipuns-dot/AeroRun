@@ -102,6 +102,7 @@ export default function Home() {
         moving_time: todayWorkout.duration_mins * 60,
         distance: todayWorkout.distance_km * 1000,
         description: todayWorkout.description,
+        workout: todayWorkout.structured_workout,
       });
 
       if (resp?.id) {

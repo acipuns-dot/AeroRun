@@ -83,39 +83,40 @@ function buildDynamicStructure(stats: UserStats): DayTemplate[] {
     const longRunDay = stats.longRunDay || "Sunday";
     const selectedRunDays = stats.selectedRunDays || [];
 
-    // Map day names to indices (0=Monday, 6=Sunday)
+    // Map day names to indices (0=Sunday, 6=Saturday) - Sunday first!
     const dayToIndex: Record<string, number> = {
-        "Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3,
-        "Friday": 4, "Saturday": 5, "Sunday": 6
+        "Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3,
+        "Thursday": 4, "Friday": 5, "Saturday": 6
     };
     const longRunIndex = dayToIndex[longRunDay];
 
-    // Base workout types based on level
+    // Base workout types based on level (excluding long run, which is handled separately)
     const workoutPriority: WorkoutType[] = stats.goal === "beginner"
-        ? ["long", "intervals", "easy", "easy"]
+        ? ["intervals", "easy", "easy"]
         : stats.goal === "intermediate"
-            ? ["long", "intervals", "tempo", "easy", "easy"]
-            : ["long", "intervals", "tempo", "easy", "easy", "easy"];
+            ? ["intervals", "tempo", "easy", "easy"]
+            : ["intervals", "tempo", "easy", "easy", "easy"];
 
-    // Build the 7-day week
+    // Build the 7-day week (Sunday to Saturday)
     const week: DayTemplate[] = [];
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     let workoutIndex = 0;
 
     for (let i = 0; i < 7; i++) {
         const dayName = `Day ${i + 1}`;
-        const fullDayName = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][i];
+        const fullDayName = dayNames[i];
 
         // Check if this day is available for running
         const isDayAvailable = selectedRunDays.length > 0
             ? selectedRunDays.includes(fullDayName)
-            : workoutIndex < daysPerWeek;
+            : true; // If no specific days selected, all days are available
 
         if (i === longRunIndex && isDayAvailable) {
             // Long run day
             week.push({ day: dayName, type: "long", intensity: "high", distFactor: 0.35 });
-        } else if (isDayAvailable && workoutIndex < daysPerWeek - 1) {
-            // Running day
-            const type = workoutPriority[workoutIndex] || "easy";
+        } else if (isDayAvailable && workoutIndex < workoutPriority.length) {
+            // Running day - use the workout priority list
+            const type = workoutPriority[workoutIndex];
             const distFactor = type === "intervals" ? 0.2 : type === "tempo" ? 0.2 : 0.15;
             week.push({ day: dayName, type, intensity: type === "easy" ? "easy" : "high", distFactor });
             workoutIndex++;

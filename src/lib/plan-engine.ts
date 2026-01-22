@@ -91,11 +91,12 @@ function buildDynamicStructure(stats: UserStats): DayTemplate[] {
     const longRunIndex = dayToIndex[longRunDay];
 
     // Base workout types based on level (excluding long run, which is handled separately)
+    // Easy runs first for recovery, then quality sessions
     const workoutPriority: WorkoutType[] = stats.goal === "beginner"
-        ? ["intervals", "easy", "easy"]
+        ? ["easy", "intervals", "easy"]
         : stats.goal === "intermediate"
-            ? ["intervals", "tempo", "easy", "easy"]
-            : ["intervals", "tempo", "easy", "easy", "easy"];
+            ? ["easy", "intervals", "tempo", "easy"]
+            : ["easy", "intervals", "tempo", "easy", "easy"];
 
     // Build the 7-day week (Sunday to Saturday)
     const week: DayTemplate[] = [];

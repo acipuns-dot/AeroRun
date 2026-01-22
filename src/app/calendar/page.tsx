@@ -60,7 +60,7 @@ export default function CalendarPage() {
         <div className="p-6 space-y-8 pb-32">
             {/* Header */}
             <div className="flex justify-between items-center text-secondary">
-                <h1 className="text-3xl font-black italic">CALENDAR</h1>
+                <h1 className="text-3xl font-black italic text-white">CALENDAR</h1>
                 <div className="bg-white/5 p-2 rounded-xl border border-white/10">
                     <CalendarIcon className="w-5 h-5 text-primary" />
                 </div>

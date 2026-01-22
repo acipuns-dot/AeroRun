@@ -37,7 +37,20 @@ export const generateTrainingPlanAction = async (stats: UserStats) => {
     let currentPbPace = "Unknown";
     let pbSecondsPerKm = 0;
     try {
-        const [pbMin, pbSec] = stats.best5kTime.split(":").map(Number);
+        // Normalize time: "35" -> "35:00", "35:30" -> "35:30"
+        const cleanTime = stats.best5kTime.trim();
+        let pbMin = 0;
+        let pbSec = 0;
+
+        if (!cleanTime.includes(":")) {
+            // Assume single number is minutes
+            pbMin = parseFloat(cleanTime);
+        } else {
+            const parts = cleanTime.split(":").map(Number);
+            pbMin = parts[0];
+            pbSec = parts[1] || 0;
+        }
+
         if (!isNaN(pbMin) && !isNaN(pbSec)) {
             const totalPbSeconds = (pbMin * 60 + pbSec);
             pbSecondsPerKm = totalPbSeconds / 5;

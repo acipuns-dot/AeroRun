@@ -162,8 +162,21 @@ export default function Settings() {
 
             const workoutsToInsert = selectedPlan.weeks.flatMap((week: any) =>
                 week.days.map((day: any) => {
-                    // Calculate "days from day 1 of the plan"
-                    const currentDayIndex = dayMap[day.day] !== undefined ? dayMap[day.day] : 0;
+                    // Normalize AI Day Input: "thu", "THU", "Thursday ", "Day 4" -> Standardize to "Thursday"
+                    const normalizeDay = (d: string) => {
+                        const clean = d.trim().toLowerCase();
+                        if (clean.startsWith("mon")) return "Monday";
+                        if (clean.startsWith("tue")) return "Tuesday";
+                        if (clean.startsWith("wed")) return "Wednesday";
+                        if (clean.startsWith("thu")) return "Thursday";
+                        if (clean.startsWith("fri")) return "Friday";
+                        if (clean.startsWith("sat")) return "Saturday";
+                        if (clean.startsWith("sun")) return "Sunday";
+                        return "Monday"; // Default fallback
+                    };
+
+                    const normalizedCurrentDay = normalizeDay(day.day);
+                    const currentDayIndex = dayMap[normalizedCurrentDay]; // Safe access
 
                     // Logic: 
                     // If Plan starts Mon (0) and we have Wed (2), offset is 2.

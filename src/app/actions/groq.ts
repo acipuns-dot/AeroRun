@@ -167,7 +167,19 @@ export const generateTrainingPlanAction = async (stats: UserStats) => {
           "coach_notes": "...",
           "total_weeks": 12,
           "weeks": [
-             // ... same structure as before ...
+            {
+              "week_number": 1,
+              "days": [
+                {
+                  "day": "Monday",
+                  "type": "rest|easy|intervals|long|tempo|race",
+                  "description": "- Warmup 10m\\n- 5km run\\n- Cooldown 5m",
+                  "distance": 5.0,
+                  "duration": 45,
+                  "target_pace": "5:30/km"
+                }
+              ]
+            }
           ]
         }
       ]

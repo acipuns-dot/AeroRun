@@ -128,27 +128,27 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                 case "easy":
                     paceSec = paces.easy.min;
                     targetPace = secondsToPace(paceSec);
-                    description = `- ${dist}km Easy Run\n- Maintain conversation pace.`;
+                    description = `- ${dist}km Easy Run Pace: ${targetPace}`;
                     break;
                 case "long":
                     paceSec = paces.long.min;
                     targetPace = secondsToPace(paceSec);
-                    description = `- ${dist}km Long Run\n- Weekly endurance anchor.`;
+                    description = `- ${dist}km Long Run Pace: ${targetPace}`;
                     break;
                 case "intervals":
                     paceSec = paces.intervals;
                     targetPace = secondsToPace(paceSec);
                     const reps = stats.goal === "beginner" ? 6 : stats.goal === "intermediate" ? 10 : 15;
-                    description = `- 10m Warmup\n- ${reps}x 400m @ ${targetPace}\n- 90s Recovery\n- 5m Cooldown`;
+                    description = `- 10m Warmup Pace: ${secondsToPace(paces.easy.max)}\n- ${reps}x 400m Pace: ${targetPace} 90s Recovery\n- 5m Cooldown Pace: ${secondsToPace(paces.easy.max)}`;
                     break;
                 case "tempo":
                     paceSec = paces.tempo.min;
                     targetPace = secondsToPace(paceSec);
-                    const tempoDist = Math.round(dist * 0.7);
-                    description = `- 2km Warmup\n- ${tempoDist}km @ Threshold Pace\n- 2km Cooldown`;
+                    const tempoDist = Math.round(dist * 0.75);
+                    description = `- 2km Warmup Pace: ${secondsToPace(paces.easy.max)}\n- ${tempoDist}km Tempo Pace: ${targetPace}\n- 2km Cooldown Pace: ${secondsToPace(paces.easy.max)}`;
                     break;
                 case "rest":
-                    description = "Rest Day - Active recovery or complete rest.";
+                    description = "Rest Day";
                     break;
             }
 

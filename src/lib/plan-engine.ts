@@ -49,21 +49,30 @@ interface DayTemplate {
 const WEEKLY_STRUCTURES: Record<string, DayTemplate[]> = {
     "beginner": [
         { day: "Monday", type: "rest", intensity: "easy", distFactor: 0 },
-        { day: "Tuesday", type: "easy", intensity: "easy", distFactor: 0.2 },
+        { day: "Tuesday", type: "easy", intensity: "easy", distFactor: 0.25 },
         { day: "Wednesday", type: "rest", intensity: "easy", distFactor: 0 },
         { day: "Thursday", type: "intervals", intensity: "high", distFactor: 0.25 },
         { day: "Friday", type: "rest", intensity: "easy", distFactor: 0 },
         { day: "Saturday", type: "easy", intensity: "easy", distFactor: 0.15 },
-        { day: "Sunday", type: "long", intensity: "medium", distFactor: 0.4 },
+        { day: "Sunday", type: "long", intensity: "medium", distFactor: 0.35 },
     ],
     "intermediate": [
         { day: "Monday", type: "rest", intensity: "easy", distFactor: 0 },
         { day: "Tuesday", type: "easy", intensity: "easy", distFactor: 0.15 },
         { day: "Wednesday", type: "intervals", intensity: "high", distFactor: 0.2 },
-        { day: "Thursday", type: "rest", intensity: "easy", distFactor: 0 },
+        { day: "Thursday", type: "easy", intensity: "easy", distFactor: 0.1 },
         { day: "Friday", type: "tempo", intensity: "medium", distFactor: 0.2 },
         { day: "Saturday", type: "easy", intensity: "easy", distFactor: 0.1 },
-        { day: "Sunday", type: "long", intensity: "high", distFactor: 0.35 },
+        { day: "Sunday", type: "long", intensity: "high", distFactor: 0.25 },
+    ],
+    "elite": [
+        { day: "Monday", type: "easy", intensity: "easy", distFactor: 0.1 },
+        { day: "Tuesday", type: "intervals", intensity: "high", distFactor: 0.15 },
+        { day: "Wednesday", type: "easy", intensity: "easy", distFactor: 0.15 },
+        { day: "Thursday", type: "tempo", intensity: "medium", distFactor: 0.2 },
+        { day: "Friday", type: "easy", intensity: "easy", distFactor: 0.1 },
+        { day: "Saturday", type: "easy", intensity: "easy", distFactor: 0.05 },
+        { day: "Sunday", type: "long", intensity: "high", distFactor: 0.25 },
     ],
 };
 
@@ -71,30 +80,36 @@ const WEEKLY_STRUCTURES: Record<string, DayTemplate[]> = {
 
 export async function generateEnginePlan(stats: UserStats, variant: "steady" | "performance" | "health") {
     const paces = getCalculatedPaces(stats.best5kTime);
-    const structure = WEEKLY_STRUCTURES[stats.goal === "elite" ? "intermediate" : stats.goal];
+    const structure = WEEKLY_STRUCTURES[stats.goal] || WEEKLY_STRUCTURES["intermediate"];
 
     // Determine plan length
     let totalWeeks = 12;
     if (stats.targetDistance === "Full Marathon") totalWeeks = 16;
 
-    // Scale volume based on target
-    const baseKm = stats.goal === "beginner" ? 20 : 35;
-    const peakKm = stats.targetDistance === "5km" ? baseKm * 1.5 :
-        stats.targetDistance === "10km" ? baseKm * 1.8 :
-            stats.targetDistance === "Half Marathon" ? baseKm * 2.2 : baseKm * 3;
+    // Level-based base volume
+    const baseKm = stats.goal === "beginner" ? 20 : stats.goal === "intermediate" ? 35 : 55;
+
+    // Distance-based multipliers
+    const multMap = {
+        "5km": 1.4,
+        "10km": 1.7,
+        "Half Marathon": 2.2,
+        "Full Marathon": 2.8
+    };
+    const peakKm = baseKm * multMap[stats.targetDistance];
 
     const weeks = [];
 
     for (let w = 1; w <= totalWeeks; w++) {
         let weekMultiplier = 1;
 
-        // Periodization
-        if (w <= 2) weekMultiplier = 0.7; // Base 1
-        else if (w === 4 || w === 8 || w === 12) weekMultiplier = 0.6; // Down Weeks
-        else if (w > 8 && w < totalWeeks - 1) weekMultiplier = 1.0; // Peak
+        // Periodization (Classic 3:1 load/deload)
+        if (w <= 2) weekMultiplier = 0.7;
+        else if (w % 4 === 0) weekMultiplier = 0.65; // Deload every 4th week
+        else if (w > 8 && w < totalWeeks - 1) weekMultiplier = 1.0;
         else if (w === totalWeeks - 1) weekMultiplier = 0.5; // Taper
         else if (w === totalWeeks) weekMultiplier = 0.3; // Race Week
-        else weekMultiplier = 0.85; // Build
+        else weekMultiplier = 0.9;
 
         // Variant modifiers
         if (variant === "performance") weekMultiplier *= 1.1;
@@ -104,27 +119,31 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
 
         const days = structure.map(t => {
             const dist = Math.round((weekKm * t.distFactor) * 10) / 10;
-            const duration = Math.round(dist * (paces.easy.min / 60)); // rough duration estimate
 
             let targetPace = "";
+            let paceSec = paces.easy.min;
             let description = "";
 
             switch (t.type) {
                 case "easy":
-                    targetPace = secondsToPace(paces.easy.min);
+                    paceSec = paces.easy.min;
+                    targetPace = secondsToPace(paceSec);
                     description = `- ${dist}km Easy Run\n- Maintain conversation pace.`;
                     break;
                 case "long":
-                    targetPace = secondsToPace(paces.long.min);
+                    paceSec = paces.long.min;
+                    targetPace = secondsToPace(paceSec);
                     description = `- ${dist}km Long Run\n- Weekly endurance anchor.`;
                     break;
                 case "intervals":
-                    targetPace = secondsToPace(paces.intervals);
-                    const reps = stats.goal === "beginner" ? 4 : 8;
+                    paceSec = paces.intervals;
+                    targetPace = secondsToPace(paceSec);
+                    const reps = stats.goal === "beginner" ? 6 : stats.goal === "intermediate" ? 10 : 15;
                     description = `- 10m Warmup\n- ${reps}x 400m @ ${targetPace}\n- 90s Recovery\n- 5m Cooldown`;
                     break;
                 case "tempo":
-                    targetPace = secondsToPace(paces.tempo.min);
+                    paceSec = paces.tempo.min;
+                    targetPace = secondsToPace(paceSec);
                     const tempoDist = Math.round(dist * 0.7);
                     description = `- 2km Warmup\n- ${tempoDist}km @ Threshold Pace\n- 2km Cooldown`;
                     break;
@@ -132,6 +151,9 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                     description = "Rest Day - Active recovery or complete rest.";
                     break;
             }
+
+            // More accurate duration based on the actual target pace
+            const duration = t.type === "rest" ? 0 : Math.round(dist * (paceSec / 60));
 
             if (w === totalWeeks && t.day === "Sunday") {
                 return {

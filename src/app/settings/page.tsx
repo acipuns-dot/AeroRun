@@ -216,9 +216,19 @@ export default function Settings() {
                     workoutDate.setDate(workoutDate.getDate() + totalDaysOffset);
 
                     // --- PARTIAL WEEK 1 LOGIC ---
-                    // If this is Week 1 and the workout date is BEFORE the start date, skip it
+                    // If this is Week 1 and the workout date is BEFORE the start date, convert to Rest Day
+                    let finalType = day.type;
+                    let finalDescription = day.description;
+                    let finalDistance = day.distance;
+                    let finalDuration = day.duration;
+                    let finalPace = day.target_pace;
+
                     if (weekNum === 1 && workoutDate < startDate) {
-                        return null; // Will be filtered out
+                        finalType = "rest";
+                        finalDescription = "Rest Day";
+                        finalDistance = 0;
+                        finalDuration = 0;
+                        finalPace = "";
                     }
 
                     // FIX: Use local time for date string
@@ -243,21 +253,18 @@ export default function Settings() {
                     return {
                         user_id: profile.id,
                         week_number: week.week_number,
-                        day_of_week: realDayName, // Updates "Monday" to "Wednesday" etc.
-                        type: day.type,
-                        description: day.description,
-                        distance_km: Number(day.distance) || 0,
-                        duration_mins: Number(day.duration) || 0,
-                        target_pace: day.target_pace || "",
+                        day_of_week: realDayName,
+                        type: finalType,
+                        description: finalDescription,
+                        distance_km: Number(finalDistance) || 0,
+                        duration_mins: Number(finalDuration) || 0,
+                        target_pace: finalPace || "",
                         date: localDateString
                     };
                 })
             );
 
-            // Filter out null entries (days skipped due to partial week logic)
-            const validWorkouts = workoutsToInsert.filter(Boolean);
-
-            const { error } = await supabase.from("workouts").insert(validWorkouts);
+            const { error } = await supabase.from("workouts").insert(workoutsToInsert);
             if (error) {
                 console.error("Supabase insert error:", error);
                 throw error;

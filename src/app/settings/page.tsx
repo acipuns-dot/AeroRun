@@ -189,29 +189,17 @@ export default function Settings() {
 
             const workoutsToInsert = selectedPlan.weeks.flatMap((week: any) =>
                 (week.days || []).map((day: any) => {
-                    // Normalize AI Day Input: "thu", "THU", "Thursday ", "Day 4" -> Standardize to "Thursday"
-                    const normalizeDay = (d: string) => {
-                        if (!d) return "Monday";
-                        const clean = d.trim().toLowerCase();
-                        if (clean.startsWith("mon")) return "Monday";
-                        if (clean.startsWith("tue")) return "Tuesday";
-                        if (clean.startsWith("wed")) return "Wednesday";
-                        if (clean.startsWith("thu")) return "Thursday";
-                        if (clean.startsWith("fri")) return "Friday";
-                        if (clean.startsWith("sat")) return "Saturday";
-                        if (clean.startsWith("sun")) return "Sunday";
-                        return "Monday"; // Default fallback
+                    // Logic: Day 1 of the plan always lands on the user's 'startDate'
+                    const getDayOffset = (d: string) => {
+                        if (d.includes("Day")) {
+                            return (parseInt(d.replace("Day ", "")) || 1) - 1;
+                        }
+                        // Legacy support for Monday-Sunday labels
+                        const map: Record<string, number> = { "Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4, "Saturday": 5, "Sunday": 6 };
+                        return map[d] || 0;
                     };
 
-                    const normalizedCurrentDay = normalizeDay(day.day);
-                    const currentDayIndex = dayMap[normalizedCurrentDay]; // Safe access
-
-                    // Logic: 
-                    // If Plan starts Mon (0) and we have Wed (2), offset is 2.
-                    // If Plan starts Mon (0) and user starts Today (Wed), then:
-                    // Day 1 (Mon) -> Becomes Today (Wed)
-                    // Day 3 (Wed) -> Becomes Today + 2 (Fri)
-                    const daysFromPlanStart = currentDayIndex - firstPlanDayIndex;
+                    const daysFromPlanStart = getDayOffset(day.day);
 
                     // If the plan has "unsorted" days, this might be negative, so we assume sorted input or handle it.
                     // But usually week 1 day 1 is the start.

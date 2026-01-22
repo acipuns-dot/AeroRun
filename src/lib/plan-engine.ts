@@ -48,31 +48,31 @@ interface DayTemplate {
 
 const WEEKLY_STRUCTURES: Record<string, DayTemplate[]> = {
     "beginner": [
-        { day: "Monday", type: "easy", intensity: "easy", distFactor: 0.25 }, // Started with a run!
-        { day: "Tuesday", type: "rest", intensity: "easy", distFactor: 0 },
-        { day: "Wednesday", type: "easy", intensity: "easy", distFactor: 0.15 },
-        { day: "Thursday", type: "intervals", intensity: "high", distFactor: 0.25 },
-        { day: "Friday", type: "rest", intensity: "easy", distFactor: 0 },
-        { day: "Saturday", type: "rest", intensity: "easy", distFactor: 0 },
-        { day: "Sunday", type: "long", intensity: "medium", distFactor: 0.35 },
+        { day: "Day 1", type: "easy", intensity: "easy", distFactor: 0.25 },
+        { day: "Day 2", type: "rest", intensity: "easy", distFactor: 0 },
+        { day: "Day 3", type: "easy", intensity: "easy", distFactor: 0.15 },
+        { day: "Day 4", type: "intervals", intensity: "high", distFactor: 0.25 },
+        { day: "Day 5", type: "rest", intensity: "easy", distFactor: 0 },
+        { day: "Day 6", type: "rest", intensity: "easy", distFactor: 0 },
+        { day: "Day 7", type: "long", intensity: "medium", distFactor: 0.35 },
     ],
     "intermediate": [
-        { day: "Monday", type: "easy", intensity: "easy", distFactor: 0.15 }, // Started with a run!
-        { day: "Tuesday", type: "intervals", intensity: "high", distFactor: 0.2 },
-        { day: "Wednesday", type: "rest", intensity: "easy", distFactor: 0 },
-        { day: "Thursday", type: "easy", intensity: "easy", distFactor: 0.15 },
-        { day: "Friday", type: "tempo", intensity: "medium", distFactor: 0.2 },
-        { day: "Saturday", type: "rest", intensity: "easy", distFactor: 0 },
-        { day: "Sunday", type: "long", intensity: "high", distFactor: 0.3 },
+        { day: "Day 1", type: "easy", intensity: "easy", distFactor: 0.15 },
+        { day: "Day 2", type: "intervals", intensity: "high", distFactor: 0.2 },
+        { day: "Day 3", type: "rest", intensity: "easy", distFactor: 0 },
+        { day: "Day 4", type: "easy", intensity: "easy", distFactor: 0.15 },
+        { day: "Day 5", type: "tempo", intensity: "medium", distFactor: 0.2 },
+        { day: "Day 6", type: "rest", intensity: "easy", distFactor: 0 },
+        { day: "Day 7", type: "long", intensity: "high", distFactor: 0.3 },
     ],
     "elite": [
-        { day: "Monday", type: "easy", intensity: "easy", distFactor: 0.1 },
-        { day: "Tuesday", type: "intervals", intensity: "high", distFactor: 0.15 },
-        { day: "Wednesday", type: "easy", intensity: "easy", distFactor: 0.15 },
-        { day: "Thursday", type: "tempo", intensity: "medium", distFactor: 0.2 },
-        { day: "Friday", type: "rest", intensity: "easy", distFactor: 0 },
-        { day: "Saturday", type: "easy", intensity: "easy", distFactor: 0.1 },
-        { day: "Sunday", type: "long", intensity: "high", distFactor: 0.15 },
+        { day: "Day 1", type: "easy", intensity: "easy", distFactor: 0.1 },
+        { day: "Day 2", type: "intervals", intensity: "high", distFactor: 0.15 },
+        { day: "Day 3", type: "easy", intensity: "easy", distFactor: 0.15 },
+        { day: "Day 4", type: "tempo", intensity: "medium", distFactor: 0.2 },
+        { day: "Day 5", type: "rest", intensity: "easy", distFactor: 0 },
+        { day: "Day 6", type: "easy", intensity: "easy", distFactor: 0.1 },
+        { day: "Day 7", type: "long", intensity: "high", distFactor: 0.15 },
     ],
 };
 
@@ -89,28 +89,14 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
     const targetSeconds = stats.targetTime ? paceToSeconds(stats.targetTime) : null;
     const goalPaceSec = targetSeconds ? targetSeconds / targetDistKm : pbPaceSec * 0.98;
 
-    // Gap: How much faster is the goal than the PB? (Positive = Faster)
     const paceGap = pbPaceSec - goalPaceSec;
 
-    // Determine plan length (Stretching for ambitious goals)
     let totalWeeks = stats.targetDistance === "Full Marathon" ? 16 : 12;
+    if (paceGap > 10) totalWeeks = stats.targetDistance === "Full Marathon" ? 22 : 18;
+    else if (paceGap > 25) totalWeeks = 24;
 
-    if (paceGap > 10) { // Goal is >10s/km faster than 5k PB
-        totalWeeks = stats.targetDistance === "Full Marathon" ? 22 : 18;
-    } else if (paceGap > 25) {
-        totalWeeks = 24; // Extra stretch for massive jumps (e.g. 10% fitness jump)
-    }
-
-    // Level-based base volume
     const baseKm = stats.goal === "beginner" ? 20 : stats.goal === "intermediate" ? 35 : 55;
-
-    // Distance-based multipliers
-    const multMap = {
-        "5km": 1.4,
-        "10km": 1.7,
-        "Half Marathon": 2.2,
-        "Full Marathon": 2.8
-    } as const;
+    const multMap = { "5km": 1.4, "10km": 1.7, "Half Marathon": 2.2, "Full Marathon": 2.8 } as const;
     const peakKm = baseKm * (multMap[stats.targetDistance as keyof typeof multMap] || 1.4);
 
     const weeks = [];
@@ -119,39 +105,21 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
         let weekMultiplier = 1;
         const progress = w / totalWeeks;
 
-        // --- VOLUME PROGRESSION (Runna Scale) ---
-        if (w <= 2) weekMultiplier = 0.65; // Onboarding
-        else if (w % 4 === 0) weekMultiplier = 0.7; // Deload
-        else if (w > totalWeeks - 1) weekMultiplier = 0.3; // Race Week
-        else if (w === totalWeeks - 1) weekMultiplier = 0.5; // Taper
-        else {
-            weekMultiplier = 0.75 + (progress * 0.25);
-        }
+        if (w <= 2) weekMultiplier = 0.65;
+        else if (w % 4 === 0) weekMultiplier = 0.7;
+        else if (w > totalWeeks - 1) weekMultiplier = 0.3;
+        else if (w === totalWeeks - 1) weekMultiplier = 0.5;
+        else weekMultiplier = 0.75 + (progress * 0.25);
 
         if (variant === "performance") weekMultiplier *= 1.1;
         if (variant === "health") weekMultiplier *= 0.85;
 
         const weekKm = peakKm * weekMultiplier;
-
-        // --- INTENSITY PROGRESSION (Ambitious Sharpening) ---
-        // If goal is ambitious (faster than PB), we start slightly slower than PB
-        // and build TO the goal pace.
-        let paceSharpening = 1.0;
-        if (paceGap > 0) {
-            const targetMult = goalPaceSec / pbPaceSec;
-            // Start at 105% of PB, end at 100% of Goal Pace
-            paceSharpening = 1.05 - (progress * (1.05 - targetMult));
-        } else {
-            // Standard sharpening (becoming 5% faster relative to initial easy pace)
-            paceSharpening = w < totalWeeks - 2 ? 1.05 - (progress * 0.05) : 1.0;
-        }
-
-        // Workout density (reps/blocks) grows from 70% to 100%
+        const paceSharpening = paceGap > 0 ? (1.05 - (progress * (1.05 - (goalPaceSec / pbPaceSec)))) : (w < totalWeeks - 2 ? 1.05 - (progress * 0.05) : 1.0);
         const workoutScale = 0.7 + (progress * 0.3);
 
         const days = structure.map(t => {
             const dist = Math.round((weekKm * t.distFactor) * 10) / 10;
-
             let targetPace = "";
             let paceSec = paces.easy.min;
             let description = "";
@@ -187,7 +155,7 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
 
             const duration = t.type === "rest" ? 0 : Math.round(dist * (paceSec / 60));
 
-            if (w === totalWeeks && t.day === "Sunday") {
+            if (w === totalWeeks && t.day === "Day 7") {
                 return {
                     day: t.day,
                     type: "race",

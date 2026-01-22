@@ -655,7 +655,11 @@ export default function Settings() {
                             {/* Intervals Sync */}
                             <div className="p-6 flex items-center justify-between group">
                                 <button
-                                    onClick={() => setIsConnectingIntervals(true)}
+                                    onClick={() => {
+                                        setEditAthleteId(profile?.intervals_athlete_id || "");
+                                        setEditApiKey(profile?.intervals_api_key || "");
+                                        setIsConnectingIntervals(true);
+                                    }}
                                     className="flex items-center space-x-4 text-left"
                                 >
                                     <div className="bg-[#121212] p-3 rounded-xl border border-white/5 group-hover:border-primary/20 transition-colors">

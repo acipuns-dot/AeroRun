@@ -202,7 +202,11 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
 
             switch (t.type) {
                 case "easy":
-                    paceSec = paces.easy.min;
+                    // Add variety: vary pace within the easy range based on day index
+                    const easyRange = paces.easy.max - paces.easy.min;
+                    const dayIndex = structure.indexOf(t);
+                    const variation = (dayIndex % 3) * 0.33; // Cycles through 0%, 33%, 66% of range
+                    paceSec = paces.easy.min + (easyRange * variation);
                     targetPace = secondsToPace(paceSec);
                     hrZone = "Zone 2";
                     description = `- ${Math.round(finalDist * 10) / 10}km Easy Run Pace: ${targetPace}\n- HR: ${hrZone} (Conversation Pace)`;

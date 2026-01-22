@@ -8,6 +8,8 @@ export type Profile = {
     training_level: 'beginner' | 'intermediate' | 'elite';
     onboarded: boolean;
     created_at: string;
+    intervals_athlete_id?: string;
+    intervals_api_key?: string;
 };
 
 export type Workout = {

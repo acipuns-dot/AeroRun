@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.91.0",
     "@types/leaflet": "^1.9.21",
     "clsx": "^2.1.1",

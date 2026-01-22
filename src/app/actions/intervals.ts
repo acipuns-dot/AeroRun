@@ -1,36 +1,54 @@
 "use server";
 
-const INTERVALS_BASE_URL = "https://intervals.icu/api/v1";
-const ATHLETE_ID = process.env.INTERVALS_API_ATHLETE_ID;
-const API_KEY = process.env.INTERVALS_API_KEY;
+import { createClient } from "@/lib/server-utils"; // Use the cookie-aware client
 
-const getHeaders = () => {
-    if (!API_KEY || !ATHLETE_ID) {
-        throw new Error("Intervals.icu API credentials not configured.");
-    }
-    const auth = Buffer.from(`API_KEY:${API_KEY}`).toString("base64");
+const INTERVALS_BASE_URL = "https://intervals.icu/api/v1";
+
+const getHeaders = (apiKey: string) => {
+    const auth = Buffer.from(`API_KEY:${apiKey}`).toString("base64");
     return {
         Authorization: `Basic ${auth}`,
         "Content-Type": "application/json",
     };
 };
 
+async function getCredentials() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Unauthorized");
+
+    const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("intervals_athlete_id, intervals_api_key")
+        .eq("id", user.id)
+        .single();
+
+    if (error || !profile?.intervals_api_key || !profile?.intervals_athlete_id) {
+        throw new Error("Intervals.icu credentials not configured.");
+    }
+
+    return {
+        athleteId: profile.intervals_athlete_id,
+        apiKey: profile.intervals_api_key
+    };
+}
+
 export async function getActivitiesAction() {
     console.log('[Server Action] getActivitiesAction called');
-    console.log('[Server Action] ATHLETE_ID:', ATHLETE_ID);
-    console.log('[Server Action] API_KEY configured:', !!API_KEY);
 
     try {
-        // Calculate date 6 months ago for the 'oldest' parameter (required by Intervals.icu API)
+        const { athleteId, apiKey } = await getCredentials();
+
+        // Calculate date 6 months ago for the 'oldest' parameter
         const sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-        const oldestDate = sixMonthsAgo.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+        const oldestDate = sixMonthsAgo.toISOString().split('T')[0];
 
-        const url = `${INTERVALS_BASE_URL}/athlete/${ATHLETE_ID}/activities?oldest=${oldestDate}`;
+        const url = `${INTERVALS_BASE_URL}/athlete/${athleteId}/activities?oldest=${oldestDate}`;
         console.log('[Server Action] Fetching from:', url);
 
         const response = await fetch(url, {
-            headers: getHeaders(),
+            headers: getHeaders(apiKey),
             cache: 'no-store'
         });
 
@@ -62,11 +80,12 @@ export async function getActivitiesAction() {
 
 export async function pushWorkoutAction(workout: any) {
     try {
+        const { athleteId, apiKey } = await getCredentials();
         const response = await fetch(
-            `${INTERVALS_BASE_URL}/athlete/${ATHLETE_ID}/events`,
+            `${INTERVALS_BASE_URL}/athlete/${athleteId}/events`,
             {
                 method: "POST",
-                headers: getHeaders(),
+                headers: getHeaders(apiKey),
                 body: JSON.stringify(workout),
             }
         );
@@ -80,11 +99,12 @@ export async function pushWorkoutAction(workout: any) {
 
 export async function deleteWorkoutAction(eventId: string) {
     try {
+        const { athleteId, apiKey } = await getCredentials();
         const response = await fetch(
-            `${INTERVALS_BASE_URL}/athlete/${ATHLETE_ID}/events/${eventId}`,
+            `${INTERVALS_BASE_URL}/athlete/${athleteId}/events/${eventId}`,
             {
                 method: "DELETE",
-                headers: getHeaders(),
+                headers: getHeaders(apiKey),
             }
         );
         return response.status === 200 || response.status === 204;
@@ -96,14 +116,15 @@ export async function deleteWorkoutAction(eventId: string) {
 
 export async function getFutureEventsAction() {
     try {
+        const { athleteId, apiKey } = await getCredentials();
         const today = new Date().toISOString().split("T")[0];
         const futureDate = new Date();
         futureDate.setMonth(futureDate.getMonth() + 6);
         const end = futureDate.toISOString().split("T")[0];
 
         const response = await fetch(
-            `${INTERVALS_BASE_URL}/athlete/${ATHLETE_ID}/events?oldest=${today}&newest=${end}`,
-            { headers: getHeaders(), cache: 'no-store' }
+            `${INTERVALS_BASE_URL}/athlete/${athleteId}/events?oldest=${today}&newest=${end}`,
+            { headers: getHeaders(apiKey), cache: 'no-store' }
         );
         if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
         return await response.json();
@@ -117,11 +138,12 @@ export async function getActivityDetailsAction(activityId: string) {
     console.log('[Server Action] getActivityDetailsAction called for ID:', activityId);
 
     try {
-        const url = `${INTERVALS_BASE_URL}/athlete/${ATHLETE_ID}/activities/${activityId}`;
+        const { athleteId, apiKey } = await getCredentials();
+        const url = `${INTERVALS_BASE_URL}/athlete/${athleteId}/activities/${activityId}`;
         console.log('[Server Action] Fetching activity details from:', url);
 
         const response = await fetch(url, {
-            headers: getHeaders(),
+            headers: getHeaders(apiKey),
             cache: 'no-store'
         });
 
@@ -147,11 +169,12 @@ export async function getActivityStreamsAction(activityId: string) {
     console.log('[Server Action] getActivityStreamsAction called for ID:', activityId);
 
     try {
+        const { apiKey } = await getCredentials();
         const url = `${INTERVALS_BASE_URL}/activity/${activityId}/streams.json?types=latlng`;
         console.log('[Server Action] Fetching activity streams from:', url);
 
         const response = await fetch(url, {
-            headers: getHeaders(),
+            headers: getHeaders(apiKey),
             cache: 'no-store'
         });
 

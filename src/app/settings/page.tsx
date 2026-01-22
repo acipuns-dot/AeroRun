@@ -23,12 +23,15 @@ export default function Settings() {
     const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
     const [isSyncing, setIsSyncing] = useState(false);
     const [showSuccessOverlay, setShowSuccessOverlay] = useState(false); // Custom toast state
+    const [isConnectingIntervals, setIsConnectingIntervals] = useState(false);
 
     // Profile Edit State
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [editHeight, setEditHeight] = useState("");
     const [editWeight, setEditWeight] = useState("");
     const [edit5kTime, setEdit5kTime] = useState("");
+    const [editAthleteId, setEditAthleteId] = useState("");
+    const [editApiKey, setEditApiKey] = useState("");
 
     const [targetDistance, setTargetDistance] = useState<"5km" | "10km" | "Half Marathon" | "Full Marathon">("5km");
 
@@ -68,7 +71,9 @@ export default function Settings() {
                 .update({
                     height: parseFloat(editHeight),
                     weight: parseFloat(editWeight),
-                    best_5k_time: edit5kTime
+                    best_5k_time: edit5kTime,
+                    intervals_athlete_id: editAthleteId,
+                    intervals_api_key: editApiKey
                 })
                 .eq("id", profile.id);
 
@@ -87,6 +92,8 @@ export default function Settings() {
         setEditHeight(profile.height.toString());
         setEditWeight(profile.weight.toString());
         setEdit5kTime(profile.best_5k_time);
+        setEditAthleteId(profile.intervals_athlete_id || "");
+        setEditApiKey(profile.intervals_api_key || "");
         setIsEditingProfile(true);
     };
 
@@ -647,19 +654,28 @@ export default function Settings() {
 
                             {/* Intervals Sync */}
                             <div className="p-6 flex items-center justify-between group">
-                                <div className="flex items-center space-x-4 text-left">
+                                <button
+                                    onClick={() => setIsConnectingIntervals(true)}
+                                    className="flex items-center space-x-4 text-left"
+                                >
                                     <div className="bg-[#121212] p-3 rounded-xl border border-white/5 group-hover:border-primary/20 transition-colors">
                                         <img src="https://intervals.icu/favicon.ico" className="w-5 h-5 grayscale opacity-50 contrast-125" />
                                     </div>
                                     <div className="text-left">
                                         <p className="font-bold text-sm">Intervals.icu</p>
-                                        <p className="text-[10px] text-white/40">Status: <span className="text-green-500/60">Connected</span></p>
+                                        <p className="text-[10px] text-white/40">
+                                            Status: {profile?.intervals_api_key ? (
+                                                <span className="text-green-500/60 font-black">Connected</span>
+                                            ) : (
+                                                <span className="text-red-500/60 font-black uppercase">Not Connected</span>
+                                            )}
+                                        </p>
                                     </div>
-                                </div>
+                                </button>
                                 <button
                                     onClick={handleSync}
-                                    disabled={isSyncing}
-                                    className="text-[10px] font-black text-primary border border-primary/20 px-4 py-2 rounded-lg hover:bg-primary/10 transition-all uppercase disabled:opacity-50"
+                                    disabled={isSyncing || !profile?.intervals_api_key}
+                                    className="text-[10px] font-black text-primary border border-primary/20 px-4 py-2 rounded-lg hover:bg-primary/10 transition-all uppercase disabled:opacity-20"
                                 >
                                     {isSyncing ? "Syncing..." : "Sync Now"}
                                 </button>
@@ -710,6 +726,96 @@ export default function Settings() {
                 </div>
             ) : (
                 <div className="text-center py-20 italic text-white/40">Profile not found.</div>
+            )}
+
+            {/* Intervals Connection Modal */}
+            {isConnectingIntervals && (
+                <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/90 backdrop-blur-md p-4">
+                    <motion.div
+                        initial={{ y: 100, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        className="bg-[#0A0A0A] border border-white/10 w-full max-w-md rounded-3xl p-8 space-y-6 relative overflow-hidden shadow-2xl"
+                    >
+                        <div className="absolute top-0 right-0 p-6">
+                            <button onClick={() => setIsConnectingIntervals(false)} className="text-white/20 hover:text-white transition-colors">
+                                <LogOut className="w-6 h-6 rotate-90" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="bg-primary/10 w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
+                                <RefreshCw className="w-6 h-6 text-primary" />
+                            </div>
+                            <h2 className="text-2xl font-black italic uppercase tracking-tight">Connect Intervals.icu</h2>
+                            <p className="text-white/40 text-xs leading-relaxed">
+                                Link your account to sync workouts and track activities automatically.
+                            </p>
+                        </div>
+
+                        {/* Step-by-Step Guide */}
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-4">
+                            <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Step-by-Step Guide</h3>
+                            <div className="space-y-3">
+                                <div className="flex gap-3">
+                                    <div className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-black flex items-center justify-center shrink-0">1</div>
+                                    <p className="text-[11px] text-white/60">
+                                        Open your <a href="https://intervals.icu/settings" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">Intervals.icu Settings</a>.
+                                    </p>
+                                </div>
+                                <div className="flex gap-3">
+                                    <div className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-black flex items-center justify-center shrink-0">2</div>
+                                    <p className="text-[11px] text-white/60">Scroll down to the <span className="text-white font-bold">API Access</span> section.</p>
+                                </div>
+                                <div className="flex gap-3">
+                                    <div className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-black flex items-center justify-center shrink-0">3</div>
+                                    <p className="text-[11px] text-white/60">Copy your <span className="text-white font-bold">Athlete ID</span> and <span className="text-white font-bold">API Key</span> below.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] ml-1">Athlete ID</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. i12345"
+                                    value={editAthleteId}
+                                    onChange={(e) => setEditAthleteId(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white focus:outline-none focus:border-primary transition-colors text-sm font-mono"
+                                />
+                                <p className="text-[9px] text-white/20 ml-1 italic">Found under "Athlete ID" (do not include the 'i')</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] ml-1">API Key</label>
+                                <input
+                                    type="password"
+                                    placeholder="your_apiKey_here"
+                                    value={editApiKey}
+                                    onChange={(e) => setEditApiKey(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white focus:outline-none focus:border-primary transition-colors text-sm font-mono"
+                                />
+                                <p className="text-[9px] text-white/20 ml-1 italic">Found under "API Key" section</p>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={async () => {
+                                await handleUpdateProfile();
+                                setIsConnectingIntervals(false);
+                            }}
+                            disabled={saving}
+                            className="w-full bg-primary text-black font-black py-4 rounded-xl hover:scale-105 active:scale-95 transition-all text-sm uppercase tracking-widest disabled:opacity-50 shadow-[0_4px_20px_rgba(0,229,255,0.3)]"
+                        >
+                            {saving ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                    Saving...
+                                </span>
+                            ) : "Save Connection"}
+                        </button>
+                    </motion.div>
+                </div>
             )}
 
             <BottomNav />

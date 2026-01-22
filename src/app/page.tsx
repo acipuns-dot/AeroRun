@@ -234,19 +234,19 @@ export default function Home() {
                 </div>
               </div>
 
-              {!todayWorkout.intervals_event_id ? (
-                <div className="flex gap-2">
-                  <button
-                    onClick={toggleWorkoutCompletion}
-                    className={`flex-1 font-bold py-4 rounded-xl flex items-center justify-center space-x-2 active:scale-95 transition-all shadow-lg border ${todayWorkout.completed
-                      ? 'bg-green-500/20 border-green-500/50 text-green-500'
-                      : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'
-                      }`}
-                  >
-                    <CheckCircle2 className={`w-5 h-5 ${todayWorkout.completed ? 'text-green-500' : 'text-white/20'}`} />
-                    <span className="uppercase tracking-widest text-sm">{todayWorkout.completed ? 'Completed' : 'Mark Done'}</span>
-                  </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={toggleWorkoutCompletion}
+                  className={`flex-1 font-bold py-4 rounded-xl flex items-center justify-center space-x-2 active:scale-95 transition-all shadow-lg border ${todayWorkout.completed
+                    ? 'bg-green-500/20 border-green-500/50 text-green-500'
+                    : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'
+                    }`}
+                >
+                  <CheckCircle2 className={`w-5 h-5 ${todayWorkout.completed ? 'text-green-500' : 'text-white/20'}`} />
+                  <span className="uppercase tracking-widest text-sm">{todayWorkout.completed ? 'Completed' : 'Mark Done'}</span>
+                </button>
 
+                {!todayWorkout.intervals_event_id ? (
                   <button
                     onClick={handlePushWorkout}
                     disabled={isPushing || pushSuccess}
@@ -276,16 +276,16 @@ export default function Home() {
                       </>
                     )}
                   </button>
-                </div>
-              ) : (
-                <button
-                  onClick={handleDeleteWorkout}
-                  className="w-full bg-red-500/10 border border-red-500/20 text-red-500 font-bold py-4 rounded-xl flex items-center justify-center space-x-2 active:scale-95 transition-all"
-                >
-                  <Trash2 className="w-5 h-5" />
-                  <span className="uppercase tracking-widest text-sm">Delete Workout</span>
-                </button>
-              )}
+                ) : (
+                  <button
+                    onClick={handleDeleteWorkout}
+                    className="flex-1 bg-red-500/10 border border-red-500/20 text-red-500 font-bold py-4 rounded-xl flex items-center justify-center space-x-2 active:scale-95 transition-all"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    <span className="uppercase tracking-widest text-sm">Delete</span>
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="bg-white/5 p-6 rounded-xl border border-dashed border-white/10">

@@ -3,8 +3,8 @@
 import { UserStats } from "@/app/actions/groq";
 
 /**
- * DETERMINISTIC RUNNING ENGINE (inspired by Runna/Pfitzinger)
- * This file replaces the core scheduling logic of the AI.
+ * AEROENGINE (VDOT-based Training Logic)
+ * Scientifically derived training plans using the Daniels VDOT model.
  */
 
 // --- MATH UTILS ---
@@ -34,27 +34,71 @@ function secondsToPace(seconds: number): string {
 }
 
 /**
- * Estimates training paces using a simplified VDOT model.
- * Adjusted to prevent walking-pace recommendations.
+ * Calculates VDOT from race results.
+ * Formula: VO2 = -4.60 + 0.182258 * v + 0.000104 * v^2
+ * f = 0.8 + 0.189439 * exp(-0.012778 * t) + 0.298955 * exp(-0.193260 * t)
+ * VDOT = VO2 / f
  */
-function getCalculatedPaces(best5k: string) {
-    const pbSec = paceToSeconds(best5k);
-    const pbSecPerKm = pbSec / 5;
+function calculateVDOT(timeSec: number, distKm: number): number {
+    const t = timeSec / 60; // time in minutes
+    const v = (distKm * 1000) / t; // velocity in m/min
 
-    // Calculate base paces
-    const easyMin = pbSecPerKm * 1.25; // Reduced from 1.35
-    const easyMax = pbSecPerKm * 1.45; // Reduced from 1.55
+    const vo2 = -4.60 + 0.182258 * v + 0.000104 * Math.pow(v, 2);
+    const f = 0.8 + 0.189439 * Math.exp(-0.012778 * t) + 0.298955 * Math.exp(-0.193260 * t);
 
-    // Cap easy pace at 9:30/km (570 seconds) to prevent walking pace
-    const cappedEasyMax = Math.min(easyMax, 570);
+    return vo2 / f;
+}
+
+/**
+ * Returns velocity (m/min) for a specific % of VO2 Max.
+ * Uses the inverse of the VO2 formula (quadratic solution).
+ * v = (-0.182258 + sqrt(0.182258^2 - 4 * 0.000104 * (-4.60 - reqVO2))) / (2 * 0.000104)
+ */
+function getVelocityForIntensity(vdot: number, intensity: number): number {
+    const reqVO2 = vdot * intensity;
+    const a = 0.000104;
+    const b = 0.182258;
+    const c = -4.60 - reqVO2;
+
+    return (-b + Math.sqrt(Math.pow(b, 2) - (4 * a * c))) / (2 * a);
+}
+
+function velocityToPaceSecPerKm(v: number): number {
+    return 60 / (v / 1000);
+}
+
+/**
+ * Estimates training paces using the scientific VDOT model.
+ */
+function getCalculatedPacesFromVDOT(vdot: number) {
+    // Daniels Training Intensities (Approx)
+    // Easy: 65-74% (using midpoint ~70%)
+    // Threshold: 86-88% (using ~87%)
+    // Interval: 95-100% (using ~97%)
+
+    const easyPace = velocityToPaceSecPerKm(getVelocityForIntensity(vdot, 0.70));
+    const thresholdPace = velocityToPaceSecPerKm(getVelocityForIntensity(vdot, 0.87));
+    const intervalPace = velocityToPaceSecPerKm(getVelocityForIntensity(vdot, 1.00));
+
+    // Wider Easy Range
+    const easyMin = velocityToPaceSecPerKm(getVelocityForIntensity(vdot, 0.74));
+    const easyMax = velocityToPaceSecPerKm(getVelocityForIntensity(vdot, 0.65));
 
     return {
-        easy: { min: easyMin, max: cappedEasyMax },
-        tempo: { min: pbSecPerKm * 1.10, max: pbSecPerKm * 1.15 }, // Tightened from 1.12-1.18
-        intervals: pbSecPerKm * 0.98, // Slightly faster than 5k pace
-        long: { min: pbSecPerKm * 1.30, max: Math.min(pbSecPerKm * 1.50, 570) }, // Reduced and capped
+        vdot,
+        easy: { min: easyMin, max: easyMax },
+        tempo: { min: thresholdPace * 0.98, max: thresholdPace * 1.02 },
+        intervals: intervalPace,
+        long: { min: easyMin, max: easyMax }, // Long runs are typically easy pace
     };
 }
+
+function getCalculatedPaces(best5k: string) {
+    const pbSec = paceToSeconds(best5k);
+    const vdot = calculateVDOT(pbSec, 5);
+    return getCalculatedPacesFromVDOT(vdot);
+}
+
 
 // --- TEMPLATES ---
 
@@ -152,12 +196,12 @@ function buildDynamicStructure(stats: UserStats): DayTemplate[] {
 }
 
 /**
- * Estimates equivalent race time for a different distance using Riegel's Formula
- * T2 = T1 * (D2/D1)^1.06
+ * Estimates equivalent race time for a different distance using Riegel's Formula.
+ * T2 = T1 * (D2/D1)^1.07 (Using 1.07 for more realistic non-elite scaling)
  */
 function getEquivalentPace(best5k: string, targetDistKm: number): number {
     const pbSec = paceToSeconds(best5k);
-    const eqTotalSec = pbSec * Math.pow(targetDistKm / 5, 1.06);
+    const eqTotalSec = pbSec * Math.pow(targetDistKm / 5, 1.07);
     return eqTotalSec / targetDistKm;
 }
 
@@ -168,20 +212,24 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
     const paces = getCalculatedPaces(stats.best5kTime);
     const structure = buildDynamicStructure(stats);
 
-    // --- AMBITIOUS GOAL DETECTION (Riegel-Adjusted) ---
+    // --- AMBITIOUS GOAL DETECTION (VDOT-Based) ---
     const targetDistKm = getDistanceKm(stats.targetDistance);
     const targetSeconds = stats.targetTime ? paceToSeconds(stats.targetTime) : null;
 
-    // 1. Calculate the pace the user is CAPABLE of today at this target distance
-    const eqPaceSec = getEquivalentPace(stats.best5kTime, targetDistKm);
+    // 1. Current VDOT (Actual Fitness)
+    const currentVDOT = paces.vdot;
 
-    // 2. Calculate the pace they WANT to run
-    // If no target time provided, we assume they want to improve (3% faster than equivalent)
-    const goalPaceSec = targetSeconds ? targetSeconds / targetDistKm : eqPaceSec * 0.97;
+    // 2. Goal VDOT (Required Fitness for target)
+    let goalVDOT = currentVDOT;
+    if (targetSeconds) {
+        goalVDOT = calculateVDOT(targetSeconds, targetDistKm);
+    } else {
+        // Assume 3% improvement if no goal time is set
+        goalVDOT = currentVDOT * 1.03;
+    }
 
-    // Gap: Positive = Goal is FASTER than their today-equivalent (ambitious)
-    // Negative = Goal is SLOWER than their today-equivalent (conservative)
-    const ambitiousPaceGap = eqPaceSec - goalPaceSec;
+    // Gap: Positive = Goal requires HIGHER VDOT (ambitious)
+    const ambitiousVDOTGap = goalVDOT - currentVDOT;
 
     // Base weeks by distance (Beginner-friendly scaling)
     const baseWeeks: Record<string, number> = {
@@ -193,10 +241,10 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
 
     let totalWeeks = baseWeeks[stats.targetDistance] || 12;
 
-    // If goal pace is faster than their today-equivalent, extend the plan
-    if (ambitiousPaceGap > 20) { // Very ambitious
+    // If goal VDOT is significantly higher than current VDOT, extend the plan
+    if (ambitiousVDOTGap > 5) { // Extremely ambitious (+5 VDOT levels is huge)
         totalWeeks = Math.max(totalWeeks, 24);
-    } else if (ambitiousPaceGap > 8) { // Ambitious (Catching more distance jumps)
+    } else if (ambitiousVDOTGap > 2) { // Ambitious (+2-5 VDOT levels)
         totalWeeks = stats.targetDistance === "Full Marathon" ? 22 : 18;
     }
 
@@ -222,25 +270,24 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
 
         const weekKm = peakKm * weekMultiplier;
 
-        // --- INTENSITY PROGRESSION (Ambitious Sharpening) ---
-        // If goal is ambitious (Faster than today's equivalent), we start slightly slower than PB and build TO the goal pace.
-        let paceSharpening = 1.0;
-        const pbPaceSec = paceToSeconds(stats.best5kTime) / 5;
+        // --- INTENSITY PROGRESSION (AeroEngine VDOT scaling) ---
+        // We start training at current fitness and build TO the goal fitness.
+        const currentPlanVDOT = currentVDOT + (ambitiousVDOTGap * progress);
 
-        if (ambitiousPaceGap > 0) { // Ambitious goal (goal pace is faster than equivalent)
-            const targetMult = goalPaceSec / pbPaceSec;
-            paceSharpening = 1.05 - (progress * (1.05 - targetMult));
-        } else {
-            // Standard sharpening
-            paceSharpening = w < totalWeeks - 2 ? 1.05 - (progress * 0.05) : 1.0;
-        }
+        // Sharpening is now naturally handled by the built-in VDOT logic,
+        // but we can add a slight secondary sharpening for "race feel" in late weeks.
+        const paceSharpening = w < totalWeeks - 2 ? 1.0 : 0.99; // 1% faster in the final weeks
+
+        // Recalculate paces for THIS week's fitness level
+        const weeklyPaces = getCalculatedPacesFromVDOT(currentPlanVDOT);
+
         const workoutScale = 0.7 + (progress * 0.3);
 
         const days = structure.map(t => {
             const dist = Math.round((weekKm * t.distFactor) * 10) / 10;
 
             let targetPace = "";
-            let paceSec = paces.easy.min;
+            let paceSec = weeklyPaces.easy.min;
             let description = "";
             let hrZone = "Zone 2";
 
@@ -253,10 +300,10 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
             switch (t.type) {
                 case "easy":
                     // Add variety: vary pace within the easy range based on day index
-                    const easyRange = paces.easy.max - paces.easy.min;
+                    const easyRange = weeklyPaces.easy.max - weeklyPaces.easy.min;
                     const dayIndex = structure.indexOf(t);
                     const variation = (dayIndex % 3) * 0.33; // Cycles through 0%, 33%, 66% of range
-                    paceSec = paces.easy.min + (easyRange * variation);
+                    paceSec = weeklyPaces.easy.min + (easyRange * variation);
                     targetPace = secondsToPace(paceSec);
                     hrZone = "Zone 2";
                     description = `- ${Math.round(finalDist * 10) / 10}km Easy Run Pace: ${targetPace}\n- HR: ${hrZone} (Conversation Pace)`;
@@ -266,16 +313,16 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                     // Week 1 Safety: Never do a long run in Week 1!
                     if (w === 1) {
                         // Convert to easy run for Week 1
-                        const easyRange = paces.easy.max - paces.easy.min;
+                        const easyRange = weeklyPaces.easy.max - weeklyPaces.easy.min;
                         const dayIndex = structure.indexOf(t);
                         const variation = (dayIndex % 3) * 0.33;
-                        paceSec = paces.easy.min + (easyRange * variation);
+                        paceSec = weeklyPaces.easy.min + (easyRange * variation);
                         targetPace = secondsToPace(paceSec);
                         hrZone = "Zone 2";
                         description = `- ${Math.round(finalDist * 10) / 10}km Easy Run Pace: ${targetPace}\n- HR: ${hrZone} (Conversation Pace)`;
                     } else {
-                        paceSec = paces.long.min;
-                        targetPace = secondsToPace(paces.long.min);
+                        paceSec = weeklyPaces.long.min;
+                        targetPace = secondsToPace(weeklyPaces.long.min);
                         hrZone = "Zone 2-3";
 
                         // Race Specificity (Point 1)
@@ -295,15 +342,15 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                 case "intervals":
                     // Week 1 Safety: No intervals in Week 1
                     if (w === 1) {
-                        const easyRange = paces.easy.max - paces.easy.min;
+                        const easyRange = weeklyPaces.easy.max - weeklyPaces.easy.min;
                         const dayIndex = structure.indexOf(t);
                         const variation = (dayIndex % 3) * 0.33;
-                        paceSec = paces.easy.min + (easyRange * variation);
+                        paceSec = weeklyPaces.easy.min + (easyRange * variation);
                         targetPace = secondsToPace(paceSec);
                         hrZone = "Zone 2";
                         description = `- ${Math.round(finalDist * 10) / 10}km Easy Run (Intro) Pace: ${targetPace}\n- HR: ${hrZone}`;
                     } else {
-                        paceSec = paces.intervals * paceSharpening;
+                        paceSec = weeklyPaces.intervals * paceSharpening;
                         targetPace = secondsToPace(paceSec);
                         hrZone = "Zone 4-5";
 
@@ -314,13 +361,13 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
 
                         if (isSpeedDay) {
                             // VO2 Max Focus
-                            description = `- 10m Warmup Pace: ${secondsToPace(paces.easy.max)}\n${reps}x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown Pace: ${secondsToPace(paces.easy.max)}\n- HR: ${hrZone}`;
+                            description = `- 10m Warmup Pace: ${secondsToPace(weeklyPaces.easy.max)}\n${reps}x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown Pace: ${secondsToPace(weeklyPaces.easy.max)}\n- HR: ${hrZone}`;
                         } else {
                             // Threshold Intevals for HM/FM
                             const repDist = "1km"; // Simplified block for stability
                             const adjReps = Math.max(3, Math.round(reps * 0.5)); // Fewer reps for longer distance
-                            const threshPace = secondsToPace(paces.tempo.max * paceSharpening);
-                            description = `- 10m Warmup Pace: ${secondsToPace(paces.easy.max)}\n${adjReps}x\n- ${repDist} Pace: ${threshPace}\n- 2m Recovery\n- 5m Cooldown\n- HR: Zone 4 (Threshold)`;
+                            const threshPace = secondsToPace(weeklyPaces.tempo.max * paceSharpening);
+                            description = `- 10m Warmup Pace: ${secondsToPace(weeklyPaces.easy.max)}\n${adjReps}x\n- ${repDist} Pace: ${threshPace}\n- 2m Recovery\n- 5m Cooldown\n- HR: Zone 4 (Threshold)`;
                         }
                         if (isTaper) description = `- 10m Warmup\n4x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown`; // Sharp taper
                     }
@@ -329,22 +376,23 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                 case "tempo":
                     // Week 1 Safety: No tempo in Week 1
                     if (w === 1) {
-                        const easyRange = paces.easy.max - paces.easy.min;
+                        const easyRange = weeklyPaces.easy.max - weeklyPaces.easy.min;
                         const dayIndex = structure.indexOf(t);
                         const variation = (dayIndex % 3) * 0.33;
-                        paceSec = paces.easy.min + (easyRange * variation);
+                        paceSec = weeklyPaces.easy.min + (easyRange * variation);
                         targetPace = secondsToPace(paceSec);
                         hrZone = "Zone 2";
                         description = `- ${Math.round(finalDist * 10) / 10}km Easy Run (Intro) Pace: ${targetPace}\n- HR: ${hrZone}`;
                     } else {
-                        paceSec = paces.tempo.min * paceSharpening;
+                        paceSec = weeklyPaces.tempo.min * paceSharpening;
                         targetPace = secondsToPace(paceSec);
                         hrZone = "Zone 3-4";
                         const tempoDist = Math.max(3, Math.round(finalDist * 0.75 * workoutScale));
 
-                        description = `- 2km Warmup Pace: ${secondsToPace(paces.easy.max)}\n- ${tempoDist}km Tempo Pace: ${targetPace}\n- 2km Cooldown Pace: ${secondsToPace(paces.easy.max)}\n- HR: ${hrZone} (Comfortably Hard)`;
+                        description = `- 2km Warmup Pace: ${secondsToPace(weeklyPaces.easy.max)}\n- ${tempoDist}km Tempo Pace: ${targetPace}\n- 2km Cooldown Pace: ${secondsToPace(weeklyPaces.easy.max)}\n- HR: ${hrZone} (Comfortably Hard)`;
                     }
                     break;
+
 
                 case "rest":
                     description = "Rest Day";

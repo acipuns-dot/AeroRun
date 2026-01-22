@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { generateTrainingPlanAction } from "@/app/actions/groq";
+import { generatePlanOptionsAction, generateFullPlanAction } from "@/app/actions/groq";
 import BottomNav from "@/components/BottomNav";
 import { motion } from "framer-motion";
 import { Settings as SettingsIcon, LogOut, User, RefreshCw, Ruler, Weight, Timer, Shield, Calendar as CalendarIcon, ArrowRight, Sparkles } from "lucide-react";
@@ -90,7 +90,7 @@ export default function Settings() {
         if (!profile) return;
         setRegenerating(true);
         try {
-            const data = await generateTrainingPlanAction({
+            const data = await generatePlanOptionsAction({
                 height: profile.height,
                 weight: profile.weight,
                 age: profile.age,
@@ -112,10 +112,36 @@ export default function Settings() {
         setRegenerating(false);
     };
 
-    const handleSelectPlan = (plan: any) => {
-        setSelectedPlan(plan);
-        setIsSelectingPlan(false);
-        setIsSelectingStartDate(true);
+    const handleSelectPlan = async (option: any) => {
+        if (!profile) return;
+        setSaving(true); // Re-use saving state for full gen loader
+        setSelectedPlanId(option.id);
+
+        try {
+            const data = await generateFullPlanAction(
+                {
+                    height: profile.height,
+                    weight: profile.weight,
+                    age: profile.age,
+                    best5kTime: profile.best_5k_time,
+                    goal: profile.training_level,
+                    targetDistance,
+                    targetTime: targetTime || undefined,
+                },
+                option.id,
+                planOptions
+            );
+
+            if (data.weeks) {
+                setSelectedPlan({ ...option, weeks: data.weeks });
+                setIsSelectingPlan(false);
+                setIsSelectingStartDate(true);
+            }
+        } catch (error) {
+            console.error("Error generating full plan:", error);
+            alert("Coach failed to build the full schedule. Please try again.");
+        }
+        setSaving(false);
     };
 
     const handleActivatePlan = async (startOption: "today" | "tomorrow" | "monday") => {
@@ -367,7 +393,12 @@ export default function Settings() {
                                     : "bg-primary text-black"
                                     }`}
                             >
-                                {saving && selectedPlanId === plan.id ? "Activating..." : `Activate Training`}
+                                {saving && selectedPlanId === plan.id ? (
+                                    <span className="flex items-center gap-2">
+                                        <RefreshCw className="w-4 h-4 animate-spin" />
+                                        Building Full Schedule...
+                                    </span>
+                                ) : `Activate Training`}
                             </button>
                         </motion.div>
                     ))}

@@ -13,33 +13,60 @@ const getHeaders = (apiKey: string) => {
 };
 
 async function getCredentials() {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Authentication session expired. Please log in again.");
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    const { data: profile, error } = await supabase
+    if (!supabaseUrl || !supabaseAnonKey) {
+        console.error("[getCredentials] MISSING ENV VARS:", { supabaseUrl: !!supabaseUrl, supabaseAnonKey: !!supabaseAnonKey });
+        throw new Error("Server configuration error: Missing environment variables.");
+    }
+
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+        console.error("[getCredentials] Auth Error:", authError);
+        throw new Error("Authentication session not found. Please log out and log back in.");
+    }
+
+    const { data: profile, error: dbError } = await supabase
         .from("profiles")
         .select("intervals_athlete_id, intervals_api_key")
         .eq("id", user.id)
         .single();
 
-    if (error) {
-        console.error("[getCredentials] DB Error:", error);
-        throw new Error("Failed to load profile data.");
+    if (dbError) {
+        console.error("[getCredentials] DB Error:", dbError);
+        throw new Error(`Profile data error: ${dbError.message}`);
     }
 
-    if (!profile?.intervals_api_key || !profile?.intervals_athlete_id) {
-        throw new Error("Intervals.icu credentials (ID or API Key) are missing in your profile.");
+    if (!profile) {
+        throw new Error("Profile record not found.");
+    }
+
+    if (!profile.intervals_api_key && !profile.intervals_athlete_id) {
+        throw new Error("Intervals.icu credentials are completely empty in your profile. Please save them in Settings.");
+    }
+
+    if (!profile.intervals_athlete_id) {
+        throw new Error("Athlete ID is missing in your profile.");
+    }
+
+    if (!profile.intervals_api_key) {
+        throw new Error("API Key is missing in your profile.");
     }
 
     // SANITIZATION: Remove non-numeric characters from Athlete ID
     const sanitizedId = profile.intervals_athlete_id.replace(/\D/g, "");
 
     if (!sanitizedId) {
-        throw new Error("Invalid Athlete ID format. It should contain numeric values.");
+        throw new Error(`Invalid Athlete ID format: "${profile.intervals_athlete_id}". It must contain numeric digits.`);
     }
 
-    console.log("[getCredentials] Sanitized Athlete ID:", { original: profile.intervals_athlete_id, sanitized: sanitizedId });
+    console.log("[getCredentials] Success:", {
+        athleteId: sanitizedId,
+        apiKeyLength: profile.intervals_api_key.length
+    });
 
     return {
         athleteId: sanitizedId,

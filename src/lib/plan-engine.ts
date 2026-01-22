@@ -171,7 +171,8 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
         let weekMultiplier = 1;
         const progress = w / totalWeeks;
 
-        if (w <= 2) weekMultiplier = 0.65;
+        if (w === 1) weekMultiplier = 0.5; // Starter Week: Very conservative
+        else if (w === 2) weekMultiplier = 0.65;
         else if (w % 4 === 0) weekMultiplier = 0.7;
         else if (w > totalWeeks - 1) weekMultiplier = 0.3;
         else if (w === totalWeeks - 1) weekMultiplier = 0.5;
@@ -251,35 +252,57 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                     break;
 
                 case "intervals":
-                    paceSec = paces.intervals * paceSharpening;
-                    targetPace = secondsToPace(paceSec);
-                    hrZone = "Zone 4-5";
-
-                    // Race Specific Intervals (Point 1) & Level (Point 3)
-                    const isSpeedDay = stats.targetDistance === "5km" || stats.targetDistance === "10km";
-                    let reps = stats.goal === "beginner" ? 6 : stats.goal === "intermediate" ? 8 : 12;
-                    reps = Math.round(reps * workoutScale);
-
-                    if (isSpeedDay) {
-                        // VO2 Max Focus
-                        description = `- 10m Warmup Pace: ${secondsToPace(paces.easy.max)}\n${reps}x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown Pace: ${secondsToPace(paces.easy.max)}\n- HR: ${hrZone}`;
+                    // Week 1 Safety: No intervals in Week 1
+                    if (w === 1) {
+                        const easyRange = paces.easy.max - paces.easy.min;
+                        const dayIndex = structure.indexOf(t);
+                        const variation = (dayIndex % 3) * 0.33;
+                        paceSec = paces.easy.min + (easyRange * variation);
+                        targetPace = secondsToPace(paceSec);
+                        hrZone = "Zone 2";
+                        description = `- ${Math.round(finalDist * 10) / 10}km Easy Run (Intro) Pace: ${targetPace}\n- HR: ${hrZone}`;
                     } else {
-                        // Threshold Intevals for HM/FM
-                        const repDist = "1km"; // Simplified block for stability
-                        const adjReps = Math.max(3, Math.round(reps * 0.5)); // Fewer reps for longer distance
-                        const threshPace = secondsToPace(paces.tempo.max * paceSharpening);
-                        description = `- 10m Warmup Pace: ${secondsToPace(paces.easy.max)}\n${adjReps}x\n- ${repDist} Pace: ${threshPace}\n- 2m Recovery\n- 5m Cooldown\n- HR: Zone 4 (Threshold)`;
+                        paceSec = paces.intervals * paceSharpening;
+                        targetPace = secondsToPace(paceSec);
+                        hrZone = "Zone 4-5";
+
+                        // Race Specific Intervals (Point 1) & Level (Point 3)
+                        const isSpeedDay = stats.targetDistance === "5km" || stats.targetDistance === "10km";
+                        let reps = stats.goal === "beginner" ? 6 : stats.goal === "intermediate" ? 8 : 12;
+                        reps = Math.round(reps * workoutScale);
+
+                        if (isSpeedDay) {
+                            // VO2 Max Focus
+                            description = `- 10m Warmup Pace: ${secondsToPace(paces.easy.max)}\n${reps}x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown Pace: ${secondsToPace(paces.easy.max)}\n- HR: ${hrZone}`;
+                        } else {
+                            // Threshold Intevals for HM/FM
+                            const repDist = "1km"; // Simplified block for stability
+                            const adjReps = Math.max(3, Math.round(reps * 0.5)); // Fewer reps for longer distance
+                            const threshPace = secondsToPace(paces.tempo.max * paceSharpening);
+                            description = `- 10m Warmup Pace: ${secondsToPace(paces.easy.max)}\n${adjReps}x\n- ${repDist} Pace: ${threshPace}\n- 2m Recovery\n- 5m Cooldown\n- HR: Zone 4 (Threshold)`;
+                        }
+                        if (isTaper) description = `- 10m Warmup\n4x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown`; // Sharp taper
                     }
-                    if (isTaper) description = `- 10m Warmup\n4x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown`; // Sharp taper
                     break;
 
                 case "tempo":
-                    paceSec = paces.tempo.min * paceSharpening;
-                    targetPace = secondsToPace(paceSec);
-                    hrZone = "Zone 3-4";
-                    const tempoDist = Math.max(3, Math.round(finalDist * 0.75 * workoutScale));
+                    // Week 1 Safety: No tempo in Week 1
+                    if (w === 1) {
+                        const easyRange = paces.easy.max - paces.easy.min;
+                        const dayIndex = structure.indexOf(t);
+                        const variation = (dayIndex % 3) * 0.33;
+                        paceSec = paces.easy.min + (easyRange * variation);
+                        targetPace = secondsToPace(paceSec);
+                        hrZone = "Zone 2";
+                        description = `- ${Math.round(finalDist * 10) / 10}km Easy Run (Intro) Pace: ${targetPace}\n- HR: ${hrZone}`;
+                    } else {
+                        paceSec = paces.tempo.min * paceSharpening;
+                        targetPace = secondsToPace(paceSec);
+                        hrZone = "Zone 3-4";
+                        const tempoDist = Math.max(3, Math.round(finalDist * 0.75 * workoutScale));
 
-                    description = `- 2km Warmup Pace: ${secondsToPace(paces.easy.max)}\n- ${tempoDist}km Tempo Pace: ${targetPace}\n- 2km Cooldown Pace: ${secondsToPace(paces.easy.max)}\n- HR: ${hrZone} (Comfortably Hard)`;
+                        description = `- 2km Warmup Pace: ${secondsToPace(paces.easy.max)}\n- ${tempoDist}km Tempo Pace: ${targetPace}\n- 2km Cooldown Pace: ${secondsToPace(paces.easy.max)}\n- HR: ${hrZone} (Comfortably Hard)`;
+                    }
                     break;
 
                 case "rest":
@@ -300,9 +323,14 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                 };
             }
 
+            // Override type for Week 1 Quality Conversions
+            const finalType = w === 1 && (t.type === "intervals" || t.type === "tempo" || t.type === "long")
+                ? "easy"
+                : t.type;
+
             return {
                 day: t.day,
-                type: t.type,
+                type: finalType,
                 description,
                 distance: dist,
                 duration,

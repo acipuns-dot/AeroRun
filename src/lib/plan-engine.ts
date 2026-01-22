@@ -132,11 +132,17 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
     const targetSeconds = stats.targetTime ? paceToSeconds(stats.targetTime) : null;
     const goalPaceSec = targetSeconds ? targetSeconds / targetDistKm : pbPaceSec * 0.98;
 
+    // Gap: Negative = Goal is FASTER than PB (ambitious), Positive = Goal is SLOWER (conservative)
     const paceGap = pbPaceSec - goalPaceSec;
 
     let totalWeeks = stats.targetDistance === "Full Marathon" ? 16 : 12;
-    if (paceGap > 10) totalWeeks = stats.targetDistance === "Full Marathon" ? 22 : 18;
-    else if (paceGap > 25) totalWeeks = 24;
+
+    // If goal pace is significantly faster than current PB, extend the plan
+    if (paceGap < -10) { // Goal is >10s/km faster than 5k PB
+        totalWeeks = stats.targetDistance === "Full Marathon" ? 22 : 18;
+    } else if (paceGap < -25) { // Goal is >25s/km faster (very ambitious)
+        totalWeeks = 24;
+    }
 
     const baseKm = stats.goal === "beginner" ? 20 : stats.goal === "intermediate" ? 35 : 55;
     const multMap = { "5km": 1.4, "10km": 1.7, "Half Marathon": 2.2, "Full Marathon": 2.8 } as const;
@@ -158,7 +164,17 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
         if (variant === "health") weekMultiplier *= 0.85;
 
         const weekKm = peakKm * weekMultiplier;
-        const paceSharpening = paceGap > 0 ? (1.05 - (progress * (1.05 - (goalPaceSec / pbPaceSec)))) : (w < totalWeeks - 2 ? 1.05 - (progress * 0.05) : 1.0);
+
+        // --- INTENSITY PROGRESSION (Ambitious Sharpening) ---
+        // If goal is ambitious (faster than PB), we start slightly slower than PB and build TO the goal pace.
+        let paceSharpening = 1.0;
+        if (paceGap < 0) { // Ambitious goal (goal pace is faster than PB)
+            const targetMult = goalPaceSec / pbPaceSec;
+            paceSharpening = 1.05 - (progress * (1.05 - targetMult));
+        } else {
+            // Standard sharpening
+            paceSharpening = w < totalWeeks - 2 ? 1.05 - (progress * 0.05) : 1.0;
+        }
         const workoutScale = 0.7 + (progress * 0.3);
 
         const days = structure.map(t => {

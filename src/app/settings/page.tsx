@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { generatePlanOptionsAction, generateFullPlanAction } from "@/app/actions/groq";
 import BottomNav from "@/components/BottomNav";
 import { motion } from "framer-motion";
-import { Settings as SettingsIcon, LogOut, User, RefreshCw, Ruler, Weight, Timer, Shield, Calendar as CalendarIcon, ArrowRight, Sparkles } from "lucide-react";
+import { Settings as SettingsIcon, LogOut, User, RefreshCw, Ruler, Weight, Timer, Shield, Calendar as CalendarIcon, ArrowRight, Sparkles, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useData } from "@/context/DataContext";
 import { getFutureEventsAction, deleteWorkoutAction } from "@/app/actions/intervals";
@@ -496,13 +496,15 @@ export default function Settings() {
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleActivatePlan("today")}
                         disabled={saving}
-                        className="glass p-6 flex flex-col items-center justify-center space-y-2 border-2 border-transparent hover:border-primary/50 transition-all group"
+                        className="glass p-8 flex flex-col items-center justify-center space-y-4 border-2 border-transparent hover:border-primary/50 transition-all group"
                     >
                         <div className="bg-primary/10 p-4 rounded-full group-hover:bg-primary/20 transition-colors">
-                            <RefreshCw className="w-8 h-8 text-primary" />
+                            <Zap className="w-8 h-8 text-primary" />
                         </div>
-                        <h3 className="text-xl font-black italic">START TODAY</h3>
-                        <p className="text-xs text-white/40 uppercase tracking-widest">IMMEDIATE ACTION</p>
+                        <div className="text-center">
+                            <h3 className="text-xl font-black italic">START TODAY</h3>
+                            <p className="text-[10px] text-white/40 uppercase font-black tracking-[0.2em]">IMMEDIATE ACTION</p>
+                        </div>
                     </motion.button>
 
                     <motion.button
@@ -510,10 +512,15 @@ export default function Settings() {
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleActivatePlan("tomorrow")}
                         disabled={saving}
-                        className="glass p-6 flex flex-col items-center justify-center space-y-2 border-2 border-transparent hover:border-white/20 transition-all"
+                        className="glass p-8 flex flex-col items-center justify-center space-y-4 border-2 border-transparent hover:border-primary/50 transition-all group"
                     >
-                        <h3 className="text-xl font-black italic">START TOMORROW</h3>
-                        <p className="text-xs text-white/40 uppercase tracking-widest">PREPARE TONIGHT</p>
+                        <div className="bg-primary/10 p-4 rounded-full group-hover:bg-primary/20 transition-colors">
+                            <Timer className="w-8 h-8 text-primary" />
+                        </div>
+                        <div className="text-center">
+                            <h3 className="text-xl font-black italic">START TOMORROW</h3>
+                            <p className="text-[10px] text-white/40 uppercase font-black tracking-[0.2em]">PREPARE TONIGHT</p>
+                        </div>
                     </motion.button>
 
                     <motion.button
@@ -521,13 +528,15 @@ export default function Settings() {
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleActivatePlan("monday")}
                         disabled={saving}
-                        className="glass p-6 flex flex-col items-center justify-center space-y-2 border-2 border-transparent hover:border-white/20 transition-all"
+                        className="glass p-8 flex flex-col items-center justify-center space-y-4 border-2 border-transparent hover:border-primary/50 transition-all group"
                     >
-                        <div className="bg-white/5 p-3 rounded-full">
-                            <CalendarIcon className="w-6 h-6 text-white/60" />
+                        <div className="bg-primary/10 p-4 rounded-full group-hover:bg-primary/20 transition-colors">
+                            <CalendarIcon className="w-8 h-8 text-primary" />
                         </div>
-                        <h3 className="text-xl font-black italic">NEXT MONDAY</h3>
-                        <p className="text-xs text-white/40 uppercase tracking-widest">FRESH WEEK START</p>
+                        <div className="text-center">
+                            <h3 className="text-xl font-black italic">NEXT MONDAY</h3>
+                            <p className="text-[10px] text-white/40 uppercase font-black tracking-[0.2em]">FRESH WEEK START</p>
+                        </div>
                     </motion.button>
                 </div>
 

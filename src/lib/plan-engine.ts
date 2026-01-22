@@ -102,20 +102,28 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
 
     for (let w = 1; w <= totalWeeks; w++) {
         let weekMultiplier = 1;
+        const progress = w / totalWeeks;
 
-        // Periodization (Classic 3:1 load/deload)
-        if (w <= 2) weekMultiplier = 0.7;
-        else if (w % 4 === 0) weekMultiplier = 0.65; // Deload every 4th week
-        else if (w > 8 && w < totalWeeks - 1) weekMultiplier = 1.0;
-        else if (w === totalWeeks - 1) weekMultiplier = 0.5; // Taper
-        else if (w === totalWeeks) weekMultiplier = 0.3; // Race Week
-        else weekMultiplier = 0.9;
+        // --- VOLUME PROGRESSION (Runna Scale) ---
+        if (w <= 2) weekMultiplier = 0.65; // Onboarding
+        else if (w % 4 === 0) weekMultiplier = 0.7; // Deload
+        else if (w > totalWeeks - 2) weekMultiplier = 0.5; // Taper/Race
+        else {
+            // Linear ramp for volume from 0.75 to 1.0
+            weekMultiplier = 0.75 + (progress * 0.25);
+        }
 
-        // Variant modifiers
         if (variant === "performance") weekMultiplier *= 1.1;
         if (variant === "health") weekMultiplier *= 0.85;
 
         const weekKm = peakKm * weekMultiplier;
+
+        // --- INTENSITY PROGRESSION (Sharpening) ---
+        // Paces start 5% slower in week 1 and 'sharpen' to goal pace by week 10
+        const paceSharpening = w < totalWeeks - 2 ? 1.05 - (progress * 0.05) : 1.0;
+
+        // Workout density (reps/blocks) grows from 70% to 100%
+        const workoutScale = 0.7 + (progress * 0.3);
 
         const days = structure.map(t => {
             const dist = Math.round((weekKm * t.distFactor) * 10) / 10;
@@ -136,15 +144,16 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                     description = `- ${dist}km Long Run Pace: ${targetPace}`;
                     break;
                 case "intervals":
-                    paceSec = paces.intervals;
+                    paceSec = paces.intervals * paceSharpening;
                     targetPace = secondsToPace(paceSec);
-                    const reps = stats.goal === "beginner" ? 6 : stats.goal === "intermediate" ? 10 : 15;
+                    const baseReps = stats.goal === "beginner" ? 6 : stats.goal === "intermediate" ? 10 : 15;
+                    const reps = Math.max(4, Math.round(baseReps * workoutScale));
                     description = `- 10m Warmup Pace: ${secondsToPace(paces.easy.max)}\n${reps}x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown Pace: ${secondsToPace(paces.easy.max)}`;
                     break;
                 case "tempo":
-                    paceSec = paces.tempo.min;
+                    paceSec = paces.tempo.min * paceSharpening;
                     targetPace = secondsToPace(paceSec);
-                    const tempoDist = Math.round(dist * 0.75);
+                    const tempoDist = Math.max(2, Math.round(dist * 0.7 * workoutScale));
                     description = `- 2km Warmup Pace: ${secondsToPace(paces.easy.max)}\n- ${tempoDist}km Tempo Pace: ${targetPace}\n- 2km Cooldown Pace: ${secondsToPace(paces.easy.max)}`;
                     break;
                 case "rest":
@@ -152,7 +161,6 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                     break;
             }
 
-            // More accurate duration based on the actual target pace
             const duration = t.type === "rest" ? 0 : Math.round(dist * (paceSec / 60));
 
             if (w === totalWeeks && t.day === "Sunday") {

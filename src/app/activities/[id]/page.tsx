@@ -21,6 +21,7 @@ export default function ActivityDetail() {
     const { activities, isLoading: isContextLoading } = useData();
     const [activity, setActivity] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [streamsLoading, setStreamsLoading] = useState(false);
     const [coordinates, setCoordinates] = useState<[number, number][]>([]);
 
     useEffect(() => {
@@ -48,6 +49,7 @@ export default function ActivityDetail() {
                 setIsLoading(false);
 
                 // Fetch GPS data
+                setStreamsLoading(true);
                 console.log('[ActivityDetail] Fetching streams for:', activityId);
                 try {
                     const streams = await getActivityStreamsAction(activityId);
@@ -84,6 +86,8 @@ export default function ActivityDetail() {
                     }
                 } catch (err) {
                     console.error('[ActivityDetail] Error fetching or processing streams:', err);
+                } finally {
+                    setStreamsLoading(false);
                 }
             }
         };
@@ -160,13 +164,19 @@ export default function ActivityDetail() {
                 </div>
 
                 {/* Map */}
-                {coordinates.length > 0 && (
+                {(streamsLoading || coordinates.length > 0) && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
                         className="w-full"
                     >
-                        <Map coordinates={coordinates} />
+                        {streamsLoading ? (
+                            <div className="h-64 w-full bg-white/5 animate-pulse rounded-2xl flex items-center justify-center border border-white/10">
+                                <span className="text-white/20 uppercase text-xs font-black tracking-widest">Loading Route...</span>
+                            </div>
+                        ) : (
+                            <Map coordinates={coordinates} />
+                        )}
                     </motion.div>
                 )}
 

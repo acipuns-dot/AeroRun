@@ -40,12 +40,14 @@ export default function Map({ coordinates }: MapProps) {
     const center = coordinates[0];
 
     return (
-        <div className="h-64 w-full rounded-2xl overflow-hidden border border-white/10 relative z-0">
+        <div className="h-64 w-full rounded-2xl overflow-hidden border border-white/10 relative z-0 neo-blue-glow">
             <MapContainer
                 center={center}
                 zoom={13}
                 scrollWheelZoom={false}
                 className="h-full w-full"
+                attributionControl={false}
+                zoomControl={false}
             >
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'

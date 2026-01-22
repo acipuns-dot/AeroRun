@@ -60,16 +60,21 @@ export const generateTrainingPlanAction = async (stats: UserStats) => {
         // Easy: 1.25 - 1.45x slower
         // Tempo: 1.10 - 1.20x slower
         // Intervals: 0.95 - 1.05x (roughly 5k pace)
-        const easyStart = clampPace(pbSecondsPerKm * 1.25);
-        const easyEnd = clampPace(pbSecondsPerKm * 1.45);
+        const easyStart = clampPace(pbSecondsPerKm * 1.35); // Slowed down from 1.25
+        const easyEnd = clampPace(pbSecondsPerKm * 1.55);   // Slowed down from 1.45
         easyRange = `${formatSecondsToPace(easyStart)} - ${formatSecondsToPace(easyEnd)}`;
 
-        const tempoStart = clampPace(pbSecondsPerKm * 1.1);
-        const tempoEnd = clampPace(pbSecondsPerKm * 1.2);
+        const tempoStart = clampPace(pbSecondsPerKm * 1.15);
+        const tempoEnd = clampPace(pbSecondsPerKm * 1.25);
         tempoRange = `${formatSecondsToPace(tempoStart)} - ${formatSecondsToPace(tempoEnd)}`;
 
-        intervalPace = formatSecondsToPace(clampPace(pbSecondsPerKm));
+        // Intervals: Cap at PB pace. Beginners should NOT run faster than PB pace in week 1.
+        // If PB is 8:00/km, Intervals should be ~8:00/km, NOT 6:00/km.
+        const safeIntervalPace = Math.max(pbSecondsPerKm, 300); // absolute cap at 5:00/km for safety unless PB is faster
+        intervalPace = formatSecondsToPace(safeIntervalPace);
     }
+
+    // ...
 
     // Reality Check: Calculate Goal Pace if target time exists
     let realityCheckNote = "";
@@ -111,8 +116,6 @@ export const generateTrainingPlanAction = async (stats: UserStats) => {
     if (stats.targetDistance === "Half Marathon") maxDistanceNote = "MAX Long Run Distance: 22km.";
     if (stats.targetDistance === "Full Marathon") maxDistanceNote = "MAX Long Run Distance: 34km.";
 
-    // ... (previous logic for pacing/reality check remains) ...
-
     // RAG-Lite: Inject Expert Knowledge
     const distanceKey = stats.targetDistance as keyof typeof COACHING_KNOWLEDGE;
     const expertKnowledge = COACHING_KNOWLEDGE[distanceKey] || COACHING_KNOWLEDGE["5km"];
@@ -129,11 +132,11 @@ export const generateTrainingPlanAction = async (stats: UserStats) => {
     ${expertKnowledge}
     
     ${REALITY_CHECK_RULES}
-
+    // ...
     CRITICAL PACING CONSTRAINTS:
     1. **Easy / Long Runs**: ${easyRange} (Floor: 9:30/km).
     2. **Tempo / Threshold**: ${tempoRange}
-    3. **Intervals**: ${intervalPace} (Start conservative).
+    3. **Intervals**: ${intervalPace} (ABSOLUTE SPEED LIMIT. DO NOT SUGGEST FASTER THAN THIS).
     4. **Race Day Target**: ${targetGoalPace}.
 
     REALITY CHECK Analysis:

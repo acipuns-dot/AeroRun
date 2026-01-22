@@ -120,34 +120,76 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
 
         const days = structure.map(t => {
             const dist = Math.round((weekKm * t.distFactor) * 10) / 10;
+
             let targetPace = "";
             let paceSec = paces.easy.min;
             let description = "";
+            let hrZone = "Zone 2";
+
+            // --- TAPER LOGIC (Point 4) ---
+            // In taper weeks (last 2), volume drops significantly, but intensity stays.
+            const isTaper = w >= totalWeeks - 1;
+            const taperDistFactor = isTaper ? 0.6 : 1.0;
+            const finalDist = t.type === "long" || t.type === "easy" ? dist * taperDistFactor : dist;
 
             switch (t.type) {
                 case "easy":
                     paceSec = paces.easy.min;
                     targetPace = secondsToPace(paceSec);
-                    description = `- ${dist}km Easy Run Pace: ${targetPace}`;
+                    hrZone = "Zone 2";
+                    description = `- ${Math.round(finalDist * 10) / 10}km Easy Run Pace: ${targetPace}\n- HR: ${hrZone} (Conversation Pace)`;
                     break;
+
                 case "long":
                     paceSec = paces.long.min;
-                    targetPace = secondsToPace(paceSec);
-                    description = `- ${dist}km Long Run Pace: ${targetPace}`;
+                    targetPace = secondsToPace(paces.long.min);
+                    hrZone = "Zone 2-3";
+
+                    // Race Specificity (Point 1)
+                    if (stats.targetDistance === "Full Marathon" || stats.targetDistance === "Half Marathon") {
+                        if (w > 6 && !isTaper && w % 2 === 0) {
+                            // Fast Finish Long Run
+                            description = `- ${Math.round(finalDist * 10) / 10}km Long Run\n- First 70% Easy Pace: ${targetPace}\n- Last 30% @ Goal Race Pace\n- HR: Zone 2 -> Zone 3`;
+                        } else {
+                            description = `- ${Math.round(finalDist * 10) / 10}km Steady Long Run Pace: ${targetPace}\n- HR: ${hrZone}`;
+                        }
+                    } else {
+                        description = `- ${Math.round(finalDist * 10) / 10}km Long Run Pace: ${targetPace}\n- HR: ${hrZone}`;
+                    }
                     break;
+
                 case "intervals":
                     paceSec = paces.intervals * paceSharpening;
                     targetPace = secondsToPace(paceSec);
-                    const baseReps = stats.goal === "beginner" ? 6 : stats.goal === "intermediate" ? 10 : 15;
-                    const reps = Math.max(4, Math.round(baseReps * workoutScale));
-                    description = `- 10m Warmup Pace: ${secondsToPace(paces.easy.max)}\n${reps}x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown Pace: ${secondsToPace(paces.easy.max)}`;
+                    hrZone = "Zone 4-5";
+
+                    // Race Specific Intervals (Point 1) & Level (Point 3)
+                    const isSpeedDay = stats.targetDistance === "5km" || stats.targetDistance === "10km";
+                    let reps = stats.goal === "beginner" ? 6 : stats.goal === "intermediate" ? 8 : 12;
+                    reps = Math.round(reps * workoutScale);
+
+                    if (isSpeedDay) {
+                        // VO2 Max Focus
+                        description = `- 10m Warmup Pace: ${secondsToPace(paces.easy.max)}\n${reps}x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown Pace: ${secondsToPace(paces.easy.max)}\n- HR: ${hrZone}`;
+                    } else {
+                        // Threshold Intevals for HM/FM
+                        const repDist = "1km"; // Simplified block for stability
+                        const adjReps = Math.max(3, Math.round(reps * 0.5)); // Fewer reps for longer distance
+                        const threshPace = secondsToPace(paces.tempo.max * paceSharpening);
+                        description = `- 10m Warmup Pace: ${secondsToPace(paces.easy.max)}\n${adjReps}x\n- ${repDist} Pace: ${threshPace}\n- 2m Recovery\n- 5m Cooldown\n- HR: Zone 4 (Threshold)`;
+                    }
+                    if (isTaper) description = `- 10m Warmup\n4x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown`; // Sharp taper
                     break;
+
                 case "tempo":
                     paceSec = paces.tempo.min * paceSharpening;
                     targetPace = secondsToPace(paceSec);
-                    const tempoDist = Math.max(2, Math.round(dist * 0.7 * workoutScale));
-                    description = `- 2km Warmup Pace: ${secondsToPace(paces.easy.max)}\n- ${tempoDist}km Tempo Pace: ${targetPace}\n- 2km Cooldown Pace: ${secondsToPace(paces.easy.max)}`;
+                    hrZone = "Zone 3-4";
+                    const tempoDist = Math.max(3, Math.round(finalDist * 0.75 * workoutScale));
+
+                    description = `- 2km Warmup Pace: ${secondsToPace(paces.easy.max)}\n- ${tempoDist}km Tempo Pace: ${targetPace}\n- 2km Cooldown Pace: ${secondsToPace(paces.easy.max)}\n- HR: ${hrZone} (Comfortably Hard)`;
                     break;
+
                 case "rest":
                     description = "Rest Day";
                     break;

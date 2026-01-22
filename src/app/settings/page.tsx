@@ -243,16 +243,23 @@ export default function Settings() {
                     const localDateString = `${year}-${month}-${dayNum}`;
 
                     // Update day name to match the NEW date
-                    // JS getDay(): 0=Sun, 1=Mon... 6=Sat
-                    // We need to map back to our 0=Mon...6=Sun system if we strictly want to store that, 
-                    // OR just store the string name.
                     const realDayIndex = workoutDate.getDay(); // 0 is Sunday
-                    // Map JS day (0=Sun) to our names.
                     const realDayName = realDayIndex === 0 ? "Sunday" : dayNames[realDayIndex - 1];
+
+                    // Calculate calendar week number (Sun-Sat weeks)
+                    // Find the Sunday of the first week
+                    const firstSunday = new Date(startDate);
+                    while (firstSunday.getDay() !== 0) {
+                        firstSunday.setDate(firstSunday.getDate() - 1);
+                    }
+
+                    // Calculate which calendar week this workout falls into
+                    const daysSinceFirstSunday = Math.floor((workoutDate.getTime() - firstSunday.getTime()) / (1000 * 60 * 60 * 24));
+                    const calendarWeekNumber = Math.floor(daysSinceFirstSunday / 7) + 1;
 
                     return {
                         user_id: profile.id,
-                        week_number: week.week_number,
+                        week_number: calendarWeekNumber,
                         day_of_week: realDayName,
                         type: finalType,
                         description: finalDescription,

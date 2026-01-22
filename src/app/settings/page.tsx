@@ -189,27 +189,26 @@ export default function Settings() {
 
             const workoutsToInsert = selectedPlan.weeks.flatMap((week: any) =>
                 (week.days || []).map((day: any) => {
-                    // Logic: Day 1 of the plan always lands on the user's 'startDate'
                     const getDayOffset = (d: string) => {
                         if (d.includes("Day")) {
                             return (parseInt(d.replace("Day ", "")) || 1) - 1;
                         }
-                        // Legacy support for Monday-Sunday labels
                         const map: Record<string, number> = { "Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4, "Saturday": 5, "Sunday": 6 };
                         return map[d] || 0;
                     };
 
                     const daysFromPlanStart = getDayOffset(day.day);
-
-                    // If the plan has "unsorted" days, this might be negative, so we assume sorted input or handle it.
-                    // But usually week 1 day 1 is the start.
-                    // Add week offset
-                    // Add week offset
                     const weekNum = Number(week.week_number) || 1;
                     const totalDaysOffset = ((weekNum - 1) * 7) + daysFromPlanStart;
 
                     const workoutDate = new Date(startDate);
                     workoutDate.setDate(workoutDate.getDate() + totalDaysOffset);
+
+                    // --- PARTIAL WEEK 1 LOGIC ---
+                    // If this is Week 1 and the workout date is BEFORE the start date, skip it
+                    if (weekNum === 1 && workoutDate < startDate) {
+                        return null; // Will be filtered out
+                    }
 
                     // FIX: Use local time for date string
                     if (isNaN(workoutDate.getTime())) {
@@ -244,7 +243,10 @@ export default function Settings() {
                 })
             );
 
-            const { error } = await supabase.from("workouts").insert(workoutsToInsert);
+            // Filter out null entries (days skipped due to partial week logic)
+            const validWorkouts = workoutsToInsert.filter(Boolean);
+
+            const { error } = await supabase.from("workouts").insert(validWorkouts);
             if (error) {
                 console.error("Supabase insert error:", error);
                 throw error;

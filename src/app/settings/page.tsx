@@ -200,23 +200,26 @@ export default function Settings() {
                         day_of_week: realDayName, // Updates "Monday" to "Wednesday" etc.
                         type: day.type,
                         description: day.description,
-                        distance_km: day.distance,
-                        duration_mins: day.duration,
-                        target_pace: day.target_pace,
+                        distance_km: Number(day.distance) || 0,
+                        duration_mins: Number(day.duration) || 0,
+                        target_pace: day.target_pace || "",
                         date: localDateString
                     };
                 })
             );
 
             const { error } = await supabase.from("workouts").insert(workoutsToInsert);
-            if (error) throw error;
+            if (error) {
+                console.error("Supabase insert error:", error);
+                throw error;
+            }
 
             await refreshData();
             alert(`"${selectedPlan.title}" activated!`);
             router.push("/plan");
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error saving plan:", error);
-            alert("Failed to save plan.");
+            alert(`Failed to save plan: ${error.message || error.details || "Unknown error"}`);
         }
         setSaving(false);
     };

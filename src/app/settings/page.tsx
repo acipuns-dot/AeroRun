@@ -22,6 +22,7 @@ export default function Settings() {
     const [saving, setSaving] = useState(false);
     const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [showSuccessOverlay, setShowSuccessOverlay] = useState(false); // Custom toast state
 
     // Profile Edit State
     const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -235,8 +236,11 @@ export default function Settings() {
             }
 
             await refreshData();
-            alert(`"${selectedPlan.title}" activated!`);
-            router.push("/plan");
+            // Show Success Overlay instead of alert
+            setShowSuccessOverlay(true);
+            setTimeout(() => {
+                router.push("/plan");
+            }, 2000);
         } catch (error: any) {
             console.error("Error saving plan:", error);
             alert(`Failed to save plan: ${error.message || error.details || "Unknown error"}`);
@@ -640,6 +644,45 @@ export default function Settings() {
             )}
 
             <BottomNav />
+
+            {/* Success Overlay */}
+            {showSuccessOverlay && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6"
+                >
+                    <motion.div
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-[#0A0A0A] border border-primary/20 p-8 rounded-2xl w-full max-w-sm flex flex-col items-center text-center shadow-2xl relative overflow-hidden"
+                    >
+                        <div className="absolute inset-0 bg-primary/5 blur-3xl" />
+
+                        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6 relative">
+                            <motion.div
+                                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                                transition={{ repeat: Infinity, duration: 2 }}
+                                className="absolute inset-0 bg-primary/20 rounded-full blur-md"
+                            />
+                            <RefreshCw className="w-8 h-8 text-primary" />
+                        </div>
+
+                        <h3 className="text-2xl font-black italic text-white mb-2">PLAN ACTIVATED</h3>
+                        <p className="text-white/60 text-sm">Your new training schedule is live.</p>
+
+                        <div className="h-1 w-full bg-white/10 mt-6 rounded-full overflow-hidden">
+                            <motion.div
+                                initial={{ width: "0%" }}
+                                animate={{ width: "100%" }}
+                                transition={{ duration: 2 }} // Matches the setTimeout
+                                className="h-full bg-primary"
+                            />
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
         </div>
     );
 }

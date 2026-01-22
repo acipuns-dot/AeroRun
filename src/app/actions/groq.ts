@@ -87,7 +87,9 @@ export const generateTrainingPlanAction = async (stats: UserStats) => {
         intervalPace = formatSecondsToPace(safeIntervalPace);
     }
 
-    // ...
+    // Hill Repeats & Strides Calibration
+    const hillsPace = tempoRange; // Hill intensity is roughly tempo effort
+    const stridesPace = "Mile pace or faster (Sprints)";
 
     // Reality Check: Calculate Goal Pace if target time exists
     let realityCheckNote = "";
@@ -138,22 +140,30 @@ export const generateTrainingPlanAction = async (stats: UserStats) => {
     const peakWeeklyKm = Math.round(baseWeeklyKm * peakMultiplier);
 
     const volumeGuidance = `
-WEEKLY VOLUME TARGETS (STRICT ADHERENCE REQUIRED):
-- Week 1-2: ${baseWeeklyKm}km (Base Phase - Foundation)
+WEEKLY VOLUME & DISTRIBUTION (STRICT):
+- **80/20 Rule**: Approximately 80% of runs MUST be Easy. Maximum 1-2 "Quality" sessions per week.
+- **Quality Sessions**: Intervals, Tempo, or Hill Repeats.
+- **Distribution**:
+    - 3-4 runs/week: 1 Quality, 2-3 Easy.
+    - 5-6 runs/week: 1-2 Quality, 4 Easy.
+- Week 1-2: ${baseWeeklyKm}km (Base Phase)
 - Week 3: ${Math.round(baseWeeklyKm * 1.1)}km
-- Week 4: ${Math.round(baseWeeklyKm * 0.8)}km ⚠️ DOWN WEEK (Recovery)
+- Week 4: ${Math.round(baseWeeklyKm * 0.8)}km ⚠️ DOWN WEEK
 - Week 5-7: ${Math.round(baseWeeklyKm * 1.2)}-${Math.round(baseWeeklyKm * 1.4)}km (Build Phase)
-- Week 8: ${Math.round(baseWeeklyKm * 1.0)}km ⚠️ DOWN WEEK (Recovery)
+- Week 8: ${Math.round(baseWeeklyKm * 1.0)}km ⚠️ DOWN WEEK
 - Week 9-11: ${Math.round(peakWeeklyKm * 0.9)}-${peakWeeklyKm}km (Peak Phase)
-- Week 12: ${Math.round(peakWeeklyKm * 0.5)}km (Taper - Race Prep)
+- Week 12: ${Math.round(peakWeeklyKm * 0.5)}km (Taper)
 
-VOLUME PROGRESSION RULES (NON-NEGOTIABLE):
-1. **10% Rule**: Never increase weekly volume by more than 10% from previous non-down week
-2. **Down Weeks**: Week 4 and Week 8 MUST be 20-25% lower than previous week for recovery
+NEW WORKOUT TYPES (INCORPORATE THESE):
+1. **Hill Repeats**: e.g., "6x30s Uphill Sprints (Strong Effort), walk down recovery."
+2. **Strides**: e.g., "Add 6x100m Strides (90% effort, walk back) to the end of an Easy Run."
+3. **Progression Runs**: e.g., "5km total: 3km Easy, 2km at Tempo Pace."
+
+VOLUME PROGRESSION RULES :
+1. **10% Rule**: Never increase weekly volume by more than 10-15%
+2. **Down Weeks**: Week 4 and Week 8 MUST be 20-25% lower than previous week
 3. **Long Run Cap**: Long run should not exceed 30-35% of weekly volume
-4. **Gradual Build**: Start at ${baseWeeklyKm}km, peak at ${peakWeeklyKm}km
-5. **Taper**: Week 12 = 40-50% of peak week volume
-6. **Periodization**: Follow Base (W1-4) → Build (W5-8) → Peak (W9-11) → Taper (W12) structure
+4. **Periodization**: Base (W1-4) → Build (W5-8) → Peak (W9-11) → Taper (W12)
 `;
 
     // RAG-Lite: Inject Expert Knowledge
@@ -178,8 +188,10 @@ VOLUME PROGRESSION RULES (NON-NEGOTIABLE):
     CRITICAL PACING CONSTRAINTS (BASELINE):
     1. **Easy / Long Runs**: ${easyRange} (Floor: 9:30/km).
     2. **Tempo / Threshold**: ${tempoRange}
-    3. **Intervals**: ${intervalPace} (ABSOLUTE SPEED LIMIT. DO NOT SUGGEST FASTER THAN THIS).
-    4. **Race Day Target**: ${targetGoalPace}.
+    3. **Intervals**: ${intervalPace}
+    4. **Hill Repeats Effort**: ${hillsPace}
+    5. **Strides Effort**: ${stridesPace}
+    6. **Race Day Target**: ${targetGoalPace}.
 
     PROGRESSION RULES (MUST APPLY):
     - **Gradual Improvement**: You MUST simulate fitness gains. Do NOT output the same pace for 12 weeks.

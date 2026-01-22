@@ -36,6 +36,7 @@ export default function Settings() {
     // User Schedule Preferences
     const [daysPerWeek, setDaysPerWeek] = useState<3 | 4 | 5 | 6>(4);
     const [longRunDay, setLongRunDay] = useState<"Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday">("Sunday");
+    const [selectedRunDays, setSelectedRunDays] = useState<string[]>(["Monday", "Wednesday", "Friday", "Sunday"]);
 
     const router = useRouter();
 
@@ -104,6 +105,7 @@ export default function Settings() {
                 targetTime: targetTime || undefined,
                 daysPerWeek,
                 longRunDay,
+                selectedRunDays,
             });
 
             if (data.options) {
@@ -135,6 +137,7 @@ export default function Settings() {
                     targetTime: targetTime || undefined,
                     daysPerWeek,
                     longRunDay,
+                    selectedRunDays,
                 },
                 option.id,
                 planOptions
@@ -343,6 +346,47 @@ export default function Settings() {
                                     </button>
                                 ))}
                             </div>
+                        </div>
+
+                        {/* Specific Days Selection */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-black text-white/60 uppercase tracking-widest ml-1">
+                                Which Days Can You Run?
+                            </label>
+                            <div className="grid grid-cols-7 gap-1">
+                                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((shortDay, idx) => {
+                                    const fullDay = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][idx];
+                                    const isSelected = selectedRunDays.includes(fullDay);
+
+                                    return (
+                                        <button
+                                            key={fullDay}
+                                            onClick={() => {
+                                                if (isSelected) {
+                                                    // Deselect (but ensure we keep at least daysPerWeek selected)
+                                                    if (selectedRunDays.length > daysPerWeek) {
+                                                        setSelectedRunDays(selectedRunDays.filter(d => d !== fullDay));
+                                                    }
+                                                } else {
+                                                    // Select (but don't exceed daysPerWeek)
+                                                    if (selectedRunDays.length < daysPerWeek) {
+                                                        setSelectedRunDays([...selectedRunDays, fullDay]);
+                                                    }
+                                                }
+                                            }}
+                                            className={`py-2 px-1 rounded-lg text-xs font-black transition-all ${isSelected
+                                                ? "bg-primary text-black"
+                                                : "bg-white/5 text-white/40 hover:bg-white/10"
+                                                }`}
+                                        >
+                                            {shortDay}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <p className="text-[10px] text-white/40 ml-1">
+                                {selectedRunDays.length}/{daysPerWeek} days selected
+                            </p>
                         </div>
 
                         {/* Long Run Day */}

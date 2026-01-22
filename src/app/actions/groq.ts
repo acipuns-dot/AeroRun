@@ -21,6 +21,7 @@ export interface UserStats {
     targetTime?: string;
     daysPerWeek?: 3 | 4 | 5 | 6;
     longRunDay?: "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
+    selectedRunDays?: string[];
 }
 
 // --- PACING HELPERS ---

@@ -257,6 +257,13 @@ export default function Settings() {
                     const daysSinceFirstSunday = Math.floor((workoutDate.getTime() - firstSunday.getTime()) / (1000 * 60 * 60 * 24));
                     const calendarWeekNumber = Math.floor(daysSinceFirstSunday / 7) + 1;
 
+                    // SAFETY: Convert long runs to easy runs in calendar Week 1
+                    if (calendarWeekNumber === 1 && finalType === "long") {
+                        finalType = "easy";
+                        finalDescription = finalDescription.replace("Long Run", "Easy Run").replace("Zone 2-3", "Zone 2");
+                        // Keep the same distance and duration, just change the type
+                    }
+
                     return {
                         user_id: profile.id,
                         week_number: calendarWeekNumber,

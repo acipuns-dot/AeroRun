@@ -30,6 +30,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         });
 
         try {
+            setIsLoading(true);
             const activeSession = currentSession || (await supabase.auth.getSession()).data.session;
             console.log('[DataContext] fetchData - active session result:', {
                 hasSession: !!activeSession,

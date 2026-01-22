@@ -147,7 +147,7 @@ export async function getActivityStreamsAction(activityId: string) {
     console.log('[Server Action] getActivityStreamsAction called for ID:', activityId);
 
     try {
-        const url = `${INTERVALS_BASE_URL}/athlete/${ATHLETE_ID}/activities/${activityId}/streams.json?types=latlng`;
+        const url = `${INTERVALS_BASE_URL}/activity/${activityId}/streams.json?types=latlng`;
         console.log('[Server Action] Fetching activity streams from:', url);
 
         const response = await fetch(url, {

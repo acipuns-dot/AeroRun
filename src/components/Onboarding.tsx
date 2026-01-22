@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, User, Ruler, Weight, Timer } from "lucide-react";
+import { ArrowRight, User, Ruler, Weight, Timer, LogOut } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export default function Onboarding({ onComplete }: { onComplete: (data: any) => void }) {
     const [step, setStep] = useState(1);
@@ -113,8 +114,8 @@ export default function Onboarding({ onComplete }: { onComplete: (data: any) => 
                                             setFormData({ ...formData, level: lvl });
                                         }}
                                         className={`p-4 rounded-xl border transition-all ${formData.level === lvl
-                                                ? "border-primary bg-primary/10 text-primary shadow-[0_0_10px_rgba(0,229,255,0.2)]"
-                                                : "border-white/10 hover:border-white/20 text-white/40"
+                                            ? "border-primary bg-primary/10 text-primary shadow-[0_0_10px_rgba(0,229,255,0.2)]"
+                                            : "border-white/10 hover:border-white/20 text-white/40"
                                             } capitalize font-bold`}
                                     >
                                         {lvl}
@@ -136,6 +137,14 @@ export default function Onboarding({ onComplete }: { onComplete: (data: any) => 
                     )}
                 </AnimatePresence>
             </div>
+
+            <button
+                onClick={() => supabase.auth.signOut()}
+                className="mt-8 flex items-center space-x-2 text-white/20 hover:text-white/60 transition-colors text-xs font-medium uppercase tracking-widest"
+            >
+                <LogOut className="w-4 h-4" />
+                <span>Not you? Log Out</span>
+            </button>
         </div>
     );
 }

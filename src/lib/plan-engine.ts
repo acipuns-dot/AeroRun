@@ -138,27 +138,46 @@ function buildDynamicStructure(stats: UserStats): DayTemplate[] {
     return week;
 }
 
+/**
+ * Estimates equivalent race time for a different distance using Riegel's Formula
+ * T2 = T1 * (D2/D1)^1.06
+ */
+function getEquivalentPace(best5k: string, targetDistKm: number): number {
+    const pbSec = paceToSeconds(best5k);
+    const eqTotalSec = pbSec * Math.pow(targetDistKm / 5, 1.06);
+    return eqTotalSec / targetDistKm;
+}
+
+// --- ENGINE ---
+// ... (buildDynamicStructure remains the same)
+
 export async function generateEnginePlan(stats: UserStats, variant: "steady" | "performance" | "health") {
     const paces = getCalculatedPaces(stats.best5kTime);
     const structure = buildDynamicStructure(stats);
 
-    // --- AMBITIOUS GOAL DETECTION ---
-    const pbSec = paceToSeconds(stats.best5kTime);
-    const pbPaceSec = pbSec / 5;
+    // --- AMBITIOUS GOAL DETECTION (Riegel-Adjusted) ---
     const targetDistKm = getDistanceKm(stats.targetDistance);
     const targetSeconds = stats.targetTime ? paceToSeconds(stats.targetTime) : null;
-    const goalPaceSec = targetSeconds ? targetSeconds / targetDistKm : pbPaceSec * 0.98;
 
-    // Gap: Negative = Goal is FASTER than PB (ambitious), Positive = Goal is SLOWER (conservative)
-    const paceGap = pbPaceSec - goalPaceSec;
+    // 1. Calculate the pace the user is CAPABLE of today at this target distance
+    const eqPaceSec = getEquivalentPace(stats.best5kTime, targetDistKm);
+
+    // 2. Calculate the pace they WANT to run
+    // If no target time provided, we assume they want to slightly improve (2% faster than equivalent)
+    const goalPaceSec = targetSeconds ? targetSeconds / targetDistKm : eqPaceSec * 0.98;
+
+    // Gap: Positive = Goal is FASTER than their today-equivalent (ambitious)
+    // Negative = Goal is SLOWER than their today-equivalent (conservative)
+    const ambitiousPaceGap = eqPaceSec - goalPaceSec;
 
     let totalWeeks = stats.targetDistance === "Full Marathon" ? 16 : 12;
 
-    // If goal pace is significantly faster than current PB, extend the plan
-    if (paceGap < -10) { // Goal is >10s/km faster than 5k PB
-        totalWeeks = stats.targetDistance === "Full Marathon" ? 22 : 18;
-    } else if (paceGap < -25) { // Goal is >25s/km faster (very ambitious)
+    // If goal pace is significantly faster than their today-equivalent, extend the plan
+    // for a safer build-up and more time for physiological adaptation.
+    if (ambitiousPaceGap > 25) { // Very ambitious (e.g. 25s/km faster than equivalent)
         totalWeeks = 24;
+    } else if (ambitiousPaceGap > 10) { // Ambitious (e.g. 10s/km faster than equivalent)
+        totalWeeks = stats.targetDistance === "Full Marathon" ? 22 : 18;
     }
 
     const baseKm = stats.goal === "beginner" ? 20 : stats.goal === "intermediate" ? 35 : 55;
@@ -184,9 +203,11 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
         const weekKm = peakKm * weekMultiplier;
 
         // --- INTENSITY PROGRESSION (Ambitious Sharpening) ---
-        // If goal is ambitious (faster than PB), we start slightly slower than PB and build TO the goal pace.
+        // If goal is ambitious (Faster than today's equivalent), we start slightly slower than PB and build TO the goal pace.
         let paceSharpening = 1.0;
-        if (paceGap < 0) { // Ambitious goal (goal pace is faster than PB)
+        const pbPaceSec = paceToSeconds(stats.best5kTime) / 5;
+
+        if (ambitiousPaceGap > 0) { // Ambitious goal (goal pace is faster than equivalent)
             const targetMult = goalPaceSec / pbPaceSec;
             paceSharpening = 1.05 - (progress * (1.05 - targetMult));
         } else {

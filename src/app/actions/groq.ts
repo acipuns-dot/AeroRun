@@ -175,7 +175,7 @@ async function callGroq(prompt: string, isQuick: boolean) {
             console.error("Groq attempt failed:", e.message);
         }
     }
-    throw new Error("AI generation failed.");
+    throw new Error("Plan generation failed. Please try again.");
 }
 
 // BACKWARD COMPAT (UI uses this to check options)

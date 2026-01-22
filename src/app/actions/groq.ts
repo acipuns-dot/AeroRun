@@ -129,6 +129,33 @@ export const generateTrainingPlanAction = async (stats: UserStats) => {
     if (stats.targetDistance === "Half Marathon") maxDistanceNote = "MAX Long Run Distance: 22km.";
     if (stats.targetDistance === "Full Marathon") maxDistanceNote = "MAX Long Run Distance: 34km.";
 
+    // Volume Progression Calculation
+    const baseWeeklyKm = stats.goal === "beginner" ? 20 : stats.goal === "intermediate" ? 30 : 40;
+    const peakMultiplier = targetDistKm === 5 ? 1.5 :
+        targetDistKm === 10 ? 1.8 :
+            targetDistKm === 21.1 ? 2.2 :
+                2.5; // Marathon
+    const peakWeeklyKm = Math.round(baseWeeklyKm * peakMultiplier);
+
+    const volumeGuidance = `
+WEEKLY VOLUME TARGETS (STRICT ADHERENCE REQUIRED):
+- Week 1-2: ${baseWeeklyKm}km (Base Phase - Foundation)
+- Week 3: ${Math.round(baseWeeklyKm * 1.1)}km
+- Week 4: ${Math.round(baseWeeklyKm * 0.8)}km ⚠️ DOWN WEEK (Recovery)
+- Week 5-7: ${Math.round(baseWeeklyKm * 1.2)}-${Math.round(baseWeeklyKm * 1.4)}km (Build Phase)
+- Week 8: ${Math.round(baseWeeklyKm * 1.0)}km ⚠️ DOWN WEEK (Recovery)
+- Week 9-11: ${Math.round(peakWeeklyKm * 0.9)}-${peakWeeklyKm}km (Peak Phase)
+- Week 12: ${Math.round(peakWeeklyKm * 0.5)}km (Taper - Race Prep)
+
+VOLUME PROGRESSION RULES (NON-NEGOTIABLE):
+1. **10% Rule**: Never increase weekly volume by more than 10% from previous non-down week
+2. **Down Weeks**: Week 4 and Week 8 MUST be 20-25% lower than previous week for recovery
+3. **Long Run Cap**: Long run should not exceed 30-35% of weekly volume
+4. **Gradual Build**: Start at ${baseWeeklyKm}km, peak at ${peakWeeklyKm}km
+5. **Taper**: Week 12 = 40-50% of peak week volume
+6. **Periodization**: Follow Base (W1-4) → Build (W5-8) → Peak (W9-11) → Taper (W12) structure
+`;
+
     // RAG-Lite: Inject Expert Knowledge
     const distanceKey = stats.targetDistance as keyof typeof COACHING_KNOWLEDGE;
     const expertKnowledge = COACHING_KNOWLEDGE[distanceKey] || COACHING_KNOWLEDGE["5km"];
@@ -145,6 +172,8 @@ export const generateTrainingPlanAction = async (stats: UserStats) => {
     ${expertKnowledge}
     
     ${REALITY_CHECK_RULES}
+    
+    ${volumeGuidance}
     // ...
     CRITICAL PACING CONSTRAINTS (BASELINE):
     1. **Easy / Long Runs**: ${easyRange} (Floor: 9:30/km).

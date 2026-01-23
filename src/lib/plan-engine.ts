@@ -118,36 +118,6 @@ interface DayTemplate {
     distFactor: number; // multiplier for baseline mileage
 }
 
-const WEEKLY_STRUCTURES: Record<string, DayTemplate[]> = {
-    "beginner": [
-        { day: "Day 1", type: "easy", intensity: "easy", distFactor: 0.25 },
-        { day: "Day 2", type: "rest", intensity: "easy", distFactor: 0 },
-        { day: "Day 3", type: "easy", intensity: "easy", distFactor: 0.15 },
-        { day: "Day 4", type: "intervals", intensity: "high", distFactor: 0.25 },
-        { day: "Day 5", type: "rest", intensity: "easy", distFactor: 0 },
-        { day: "Day 6", type: "rest", intensity: "easy", distFactor: 0 },
-        { day: "Day 7", type: "long", intensity: "medium", distFactor: 0.35 },
-    ],
-    "intermediate": [
-        { day: "Day 1", type: "easy", intensity: "easy", distFactor: 0.15 },
-        { day: "Day 2", type: "intervals", intensity: "high", distFactor: 0.2 },
-        { day: "Day 3", type: "rest", intensity: "easy", distFactor: 0 },
-        { day: "Day 4", type: "easy", intensity: "easy", distFactor: 0.15 },
-        { day: "Day 5", type: "tempo", intensity: "medium", distFactor: 0.2 },
-        { day: "Day 6", type: "rest", intensity: "easy", distFactor: 0 },
-        { day: "Day 7", type: "long", intensity: "high", distFactor: 0.3 },
-    ],
-    "elite": [
-        { day: "Day 1", type: "easy", intensity: "easy", distFactor: 0.1 },
-        { day: "Day 2", type: "intervals", intensity: "high", distFactor: 0.15 },
-        { day: "Day 3", type: "easy", intensity: "easy", distFactor: 0.15 },
-        { day: "Day 4", type: "tempo", intensity: "medium", distFactor: 0.2 },
-        { day: "Day 5", type: "rest", intensity: "easy", distFactor: 0 },
-        { day: "Day 6", type: "easy", intensity: "easy", distFactor: 0.1 },
-        { day: "Day 7", type: "long", intensity: "high", distFactor: 0.15 },
-    ],
-};
-
 // --- ENGINE ---
 
 function buildDynamicStructure(stats: UserStats): DayTemplate[] {
@@ -242,7 +212,7 @@ function buildDynamicStructure(stats: UserStats): DayTemplate[] {
     }
 
     // 3. Ratios (DNA: 20% Quality, 35% Easy, 45% Long)
-    // Redstributed for higher safety and better aerobic base building.
+    // Redstributed for higher safety across all levels (80/20 rule).
     const Q_RATIO = 0.20;
     const E_RATIO = 0.35;
     const L_RATIO = hasLong ? 0.45 : 0;

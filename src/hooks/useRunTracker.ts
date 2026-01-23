@@ -147,12 +147,18 @@ export function useRunTracker(userWeightKg: number = 70) {
                     longitude: position.coords.longitude,
                     altitude: position.coords.altitude,
                     speed: position.coords.speed,
+                    accuracy: position.coords.accuracy,
                     timestamp: position.timestamp,
                 };
 
                 setCurrentLocation(newPoint);
 
                 if (!isRunningRef.current) return;
+
+                // Drift Protection: Ignore points with poor accuracy (> 25m)
+                if (newPoint.accuracy && newPoint.accuracy > 25) {
+                    return;
+                }
 
                 if (lastLocationRef.current) {
                     const dist = getDistanceFromLatLonInMeters(
@@ -165,7 +171,10 @@ export function useRunTracker(userWeightKg: number = 70) {
                     const timeDiff = (newPoint.timestamp - lastLocationRef.current.timestamp) / 1000;
                     const calculatedSpeed = timeDiff > 0 ? dist / timeDiff : 0;
 
-                    if (dist > 1.5 && calculatedSpeed < 12) {
+                    // Improved Drift Filter: 
+                    // 1. Must move more than 3 meters OR have a speed > 0.6 m/s (approx 2 km/h)
+                    // 2. Must be slower than 12 m/s (approx 43 km/h)
+                    if ((dist > 3 || calculatedSpeed > 0.6) && calculatedSpeed < 12) {
                         setDistance((prev) => {
                             const newTotal = prev + dist;
                             const kcal = (newTotal / 1000) * userWeightKg * 1.036;
@@ -176,13 +185,13 @@ export function useRunTracker(userWeightKg: number = 70) {
                         lastLocationRef.current = newPoint;
 
                         recentPointsRef.current.push(newPoint);
-                        const cutoff = Date.now() - 20000; // Increased to 20 seconds
+                        const cutoff = Date.now() - 30000; // Increased to 30s for professional smoothing
                         recentPointsRef.current = recentPointsRef.current.filter(p => p.timestamp > cutoff);
 
                         if (recentPointsRef.current.length > 2) {
-                            // Calculate weighted average speed across all segments in the window
-                            let totalWindowDist = 0;
-                            let totalWindowTime = 0;
+                            // Calculate time-weighted average speed across the window
+                            let totalWeightedSpeed = 0;
+                            let totalWeight = 0;
 
                             for (let i = 1; i < recentPointsRef.current.length; i++) {
                                 const p1 = recentPointsRef.current[i - 1];
@@ -191,32 +200,36 @@ export function useRunTracker(userWeightKg: number = 70) {
                                 const segmentDist = getDistanceFromLatLonInMeters(p1.latitude, p1.longitude, p2.latitude, p2.longitude);
                                 const segmentTime = (p2.timestamp - p1.timestamp) / 1000;
 
-                                // Filter out noise: ignore segments with impossible speeds (> 15m/s)
+                                // Filter out impossible speed spikes within the window
                                 if (segmentTime > 0 && (segmentDist / segmentTime) < 15) {
-                                    totalWindowDist += segmentDist;
-                                    totalWindowTime += segmentTime;
+                                    // Newest points have 2x weight of oldest points
+                                    const timeWeight = 1 + ((p2.timestamp - cutoff) / 30000);
+                                    totalWeightedSpeed += (segmentDist / segmentTime) * timeWeight;
+                                    totalWeight += timeWeight;
                                 }
                             }
 
-                            if (totalWindowDist > 5 && totalWindowTime > 0) {
-                                const avgSpeedMs = totalWindowDist / totalWindowTime;
+                            if (totalWeight > 0) {
+                                const avgSpeedMs = totalWeightedSpeed / totalWeight;
 
-                                // Human-centric filtering: 
-                                // Minimum pace ~2:30 min/km (6.67 m/s)
-                                // Only update if speed is within reasonable bounds
+                                // Human running bounds: 0.5 m/s to 10 m/s
                                 if (avgSpeedMs > 0.5 && avgSpeedMs < 10) {
                                     const paceSecPerKm = 1000 / avgSpeedMs;
 
                                     // Soft-transition pace (exponential smoothing)
                                     setCurrentPace(prev => {
                                         if (prev === 0) return paceSecPerKm;
-                                        return prev * 0.7 + paceSecPerKm * 0.3;
+                                        return prev * 0.8 + paceSecPerKm * 0.2;
                                     });
                                 } else if (avgSpeedMs <= 0.5) {
                                     setCurrentPace(0); // Effectively stopped
                                 }
                             }
                         }
+                    } else if (dist < 1 && calculatedSpeed < 0.3) {
+                        // Fast Stop Detection: If almost no movement, decay pace quickly
+                        setCurrentPace(prev => (prev > 0 ? Math.min(prev * 1.2, 3599) : 0));
+                        // Note: Higher pace value = slower speed. Trending to 3599 (slow) or 0 (stopped)
                     }
                 } else {
                     setPath([newPoint]);

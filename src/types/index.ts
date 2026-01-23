@@ -34,6 +34,7 @@ export interface GeoPoint {
     altitude: number | null;
     timestamp: number;
     speed: number | null;
+    accuracy: number | null;
 }
 
 export type LocalActivity = {

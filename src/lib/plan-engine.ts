@@ -241,10 +241,11 @@ function buildDynamicStructure(stats: UserStats): DayTemplate[] {
         assignedCount++;
     }
 
-    // 3. Ratios (DNA: 35% Quality, 25% Easy, 40% Long)
-    const Q_RATIO = 0.35;
-    const E_RATIO = 0.25;
-    const L_RATIO = hasLong ? 0.40 : 0;
+    // 3. Ratios (DNA: 20% Quality, 35% Easy, 45% Long)
+    // Redstributed for higher safety and better aerobic base building.
+    const Q_RATIO = 0.20;
+    const E_RATIO = 0.35;
+    const L_RATIO = hasLong ? 0.45 : 0;
 
     // Redstribute if any count is 0
     let adjQRat = qCount > 0 ? Q_RATIO : 0;

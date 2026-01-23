@@ -107,9 +107,9 @@ export default function RecordPage() {
     }, [currentLocation]);
 
     return (
-        <div className="min-h-screen bg-[#0A0A0A] text-white flex flex-col relative overflow-hidden">
+        <div className="h-[100dvh] bg-[#0A0A0A] text-white flex flex-col relative overflow-hidden">
             {/* Header / Map Area */}
-            <div className="h-[45vh] relative w-full border-b border-white/10">
+            <div className="h-[35vh] relative w-full border-b border-white/10">
                 <LiveMap path={pathCoords} currentLocation={currentCoords} />
 
                 {/* Overlay Header */}
@@ -140,13 +140,6 @@ export default function RecordPage() {
                     </Link>
                 </div>
 
-                {/* Waiting for GPS Overlay */}
-                {!currentLocation && !error && (
-                    <div className="absolute inset-0 flex items-center justify-center z-[400]">
-                        <p className="text-white/20 text-xs font-bold tracking-widest animate-pulse">Waiting for GPS...</p>
-                    </div>
-                )}
-
                 {(error || saveError) && (
                     <div className="absolute bottom-4 left-4 right-4 bg-red-500/20 border border-red-500/50 backdrop-blur-md p-3 rounded-xl z-[500] pointer-events-none">
                         <p className="text-red-200 text-xs font-bold flex items-center">
@@ -158,7 +151,7 @@ export default function RecordPage() {
             </div>
 
             {/* Stats Area - The HUD */}
-            <div className="flex-1 flex flex-col p-6 relative z-10 space-y-8">
+            <div className="flex-1 flex flex-col p-6 relative z-10 space-y-4">
 
                 {/* Main Timer */}
                 <div className="text-center space-y-0 mt-4">

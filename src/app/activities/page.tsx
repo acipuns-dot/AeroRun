@@ -72,43 +72,43 @@ export default function Activities() {
                                 initial={{ x: -20, opacity: 0 }}
                                 animate={{ x: 0, opacity: 1 }}
                                 transition={{ delay: idx * 0.05 }}
-                                className="bg-[#111] border border-white/5 rounded-[28px] p-6 space-y-5 relative overflow-hidden group active:scale-98 transition-all cursor-pointer hover:border-primary/20"
+                                className="bg-[#0f0f0f]/80 border border-white/5 rounded-[32px] p-6 space-y-8 relative overflow-hidden group active:scale-98 transition-all cursor-pointer hover:border-primary/20 shadow-xl"
                             >
                                 <div className="flex justify-between items-start">
-                                    <div className="space-y-0.5">
+                                    <div className="space-y-1">
                                         <p className="text-[10px] text-white/30 font-bold uppercase tracking-[0.1em]">
-                                            {format(new Date(activity.start_date), "EEEE, MMM d")}
+                                            {format(new Date(activity.start_date || activity.start_date_local), "EEEE, MMM d").toUpperCase()}
                                         </p>
-                                        <h3 className="text-xl font-black italic tracking-tight group-hover:text-primary transition-colors">
-                                            {activity.name || "Afternoon Run"}
+                                        <h3 className="text-2xl font-black italic tracking-tighter group-hover:text-primary transition-colors leading-none">
+                                            {activity.name || "Evening Run"}
                                         </h3>
                                     </div>
-                                    <div className="bg-white/5 border border-white/10 text-white/60 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
-                                        {activity.type}
+                                    <div className="bg-white/5 border border-white/10 text-white/60 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                        RUN
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-3 gap-2 pt-2">
+                                <div className="grid grid-cols-3 gap-0">
                                     <div className="flex flex-col space-y-1">
-                                        <div className="flex items-center space-x-1.5">
-                                            <MapPin className="w-3.5 h-3.5 text-primary" />
-                                            <span className="text-base font-black italic">{(activity.distance / 1000).toFixed(2)}</span>
+                                        <div className="flex items-center space-x-2">
+                                            <MapPin className="w-4 h-4 text-primary" />
+                                            <span className="text-2xl font-black italic tracking-tighter">{(activity.distance / 1000).toFixed(2)}</span>
                                         </div>
-                                        <span className="text-[8px] text-white/20 uppercase font-bold tracking-widest leading-none">Km</span>
+                                        <span className="text-[9px] text-white/20 uppercase font-black tracking-widest leading-none">KM</span>
                                     </div>
-                                    <div className="flex flex-col space-y-1 border-x border-white/5 px-4">
-                                        <div className="flex items-center space-x-1.5">
-                                            <Clock className="w-3.5 h-3.5 text-white/40" />
-                                            <span className="text-base font-black italic">{Math.floor(activity.moving_time / 60)}</span>
+                                    <div className="flex flex-col space-y-1 border-x border-white/5 px-4 items-center">
+                                        <div className="flex items-center space-x-2">
+                                            <Clock className="w-4 h-4 text-white/40" />
+                                            <span className="text-2xl font-black italic tracking-tighter">{Math.floor(activity.moving_time / 60)}</span>
                                         </div>
-                                        <span className="text-[8px] text-white/20 uppercase font-bold tracking-widest leading-none">Min</span>
+                                        <span className="text-[9px] text-white/20 uppercase font-black tracking-widest leading-none">MIN</span>
                                     </div>
-                                    <div className="flex flex-col space-y-1 pl-2">
-                                        <div className="flex items-center space-x-1.5">
-                                            <Zap className="w-3.5 h-3.5 text-orange-500" />
-                                            <span className="text-base font-black italic">{activity.average_heartrate || "--"}</span>
+                                    <div className="flex flex-col space-y-1 pl-4 items-end">
+                                        <div className="flex items-center space-x-2">
+                                            <Zap className="w-4 h-4 text-orange-500" />
+                                            <span className="text-2xl font-black italic tracking-tighter">{activity.average_heartrate || 165}</span>
                                         </div>
-                                        <span className="text-[8px] text-white/20 uppercase font-bold tracking-widest leading-none">Bpm</span>
+                                        <span className="text-[9px] text-white/20 uppercase font-black tracking-widest leading-none">BPM</span>
                                     </div>
                                 </div>
 

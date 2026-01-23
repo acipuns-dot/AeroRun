@@ -265,19 +265,28 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
 
         if (w === 1) {
             // --- UNIVERSAL CONSERVATION PRINCIPLE ---
-            // Every plan starts at 50% of peak volume in Week 1.
-            // This applies to ALL levels (Beginner to Elite) to allow
-            // structural adaptation (tendons/ligaments) regardless of cardiovascular fitness.
+            // Week 1: Foundation (50%). Allows structural adaptation for all levels.
             weekMultiplier = 0.5;
+        } else if (w === 2) {
+            // Week 2: Build (60%). Gradual increase to maintain safety.
+            weekMultiplier = 0.6;
+        } else if (w % 4 === 0 && w < totalWeeks - 2) {
+            // Recovery/Deload: Every 4th week (approx 20-30% drop from previous peak)
+            weekMultiplier = 0.7;
+        } else if (w >= totalWeeks - 1) {
+            // Taper Phase: Sharp drop for race readiness
+            weekMultiplier = w === totalWeeks ? 0.3 : 0.5;
+        } else {
+            // General Progression: Gradual ramp from 0.7 to 1.0 (Peak)
+            const growthPhase = w / (totalWeeks - 2);
+            weekMultiplier = 0.7 + (growthPhase * 0.3);
         }
-        else if (w === 2) weekMultiplier = 0.65;
-        else if (w % 4 === 0) weekMultiplier = 0.7;
-        else if (w > totalWeeks - 1) weekMultiplier = 0.3;
-        else if (w === totalWeeks - 1) weekMultiplier = 0.5;
-        else weekMultiplier = 0.75 + (progress * 0.25);
 
+        // --- HEALTH VARIANT SCALING ---
         if (variant === "performance") weekMultiplier *= 1.1;
-        if (variant === "health") weekMultiplier *= 0.85;
+        if (variant === "health") {
+            weekMultiplier *= 0.85; // Lower overall floor for health-focused plans
+        }
 
         const weekKm = peakKm * weekMultiplier;
 

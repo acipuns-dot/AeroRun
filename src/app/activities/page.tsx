@@ -106,7 +106,7 @@ export default function Activities() {
                                     <div className="flex flex-col space-y-1 pl-4 items-end">
                                         <div className="flex items-center space-x-2">
                                             <Zap className="w-4 h-4 text-orange-500" />
-                                            <span className="text-2xl font-black italic tracking-tighter">{activity.average_heartrate || 165}</span>
+                                            <span className="text-2xl font-black italic tracking-tighter">{activity.average_heartrate || "--"}</span>
                                         </div>
                                         <span className="text-[9px] text-white/20 uppercase font-black tracking-widest leading-none">BPM</span>
                                     </div>

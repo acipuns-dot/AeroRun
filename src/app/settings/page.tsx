@@ -650,7 +650,7 @@ export default function Settings() {
                                 Edit Profile
                             </button>
                         ) : (
-                            <div className="flex gap-4">
+                            <div className="flex flex-col md:flex-row gap-4">
                                 <button onClick={() => setIsEditingProfile(false)} className="text-[10px] font-black uppercase tracking-[0.1em] text-white/40">Cancel</button>
                                 <button onClick={handleUpdateProfile} disabled={saving} className="text-[10px] font-black uppercase tracking-[0.1em] text-primary">Save</button>
                             </div>

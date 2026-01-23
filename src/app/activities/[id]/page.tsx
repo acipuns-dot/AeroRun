@@ -48,7 +48,24 @@ export default function ActivityDetail() {
                 setActivity(currentActivity);
                 setIsLoading(false);
 
-                // Fetch GPS data
+                // --- 1. Check for Local Path first ---
+                if (currentActivity.path && Array.isArray(currentActivity.path) && currentActivity.path.length > 0) {
+                    console.log('[ActivityDetail] Found local path data, formatting coordinates...');
+                    const localCoords: [number, number][] = currentActivity.path.map((p: any) => {
+                        // Handle both GeoPoint objects and [lat, lng] arrays
+                        if (Array.isArray(p)) return [p[0], p[1]] as [number, number];
+                        return [p.latitude, p.longitude] as [number, number];
+                    }).filter((c: any) => !isNaN(c[0]) && !isNaN(c[1]));
+
+                    if (localCoords.length > 0) {
+                        console.log('[ActivityDetail] Map loaded from local path:', localCoords.length, 'points');
+                        setCoordinates(localCoords);
+                        setStreamsLoading(false);
+                        return; // Successfully loaded local path, skip stream fetch
+                    }
+                }
+
+                // --- 2. Fallback: Fetch GPS data from Intervals.icu ---
                 setStreamsLoading(true);
                 console.log('[ActivityDetail] Fetching streams for:', activityId);
                 try {

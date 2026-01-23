@@ -198,15 +198,33 @@ function buildDynamicStructure(stats: UserStats): DayTemplate[] {
     // Assign others from priority until activeDays or daysPerWeek exhausted
     const otherActiveDays = activeDays.filter(d => d !== longRunIndex);
     let assignedCount = hasLong ? 1 : 0;
-    let workoutPtr = 0;
+
+    const qualityTypes: WorkoutType[] = ["intervals", "tempo"];
+    const pool = [...workoutPriority];
 
     for (const d of otherActiveDays) {
         if (assignedCount >= daysPerWeek) break;
-        const type = workoutPriority[workoutPtr] || "easy";
+
+        // Find next workout that doesn't violate "side-by-side" rule
+        let workoutIdx = -1;
+        const prevWorkout = plannedStructure.find(p => p.index === d - 1);
+        const isPrevQuality = prevWorkout && qualityTypes.includes(prevWorkout.type);
+
+        if (isPrevQuality) {
+            // Try to find a non-quality workout first
+            workoutIdx = pool.findIndex(t => !qualityTypes.includes(t));
+            // If no easy runs left, we have no choice but to take a quality one or skip
+            // For now, we take the original priority order if forced
+        }
+
+        if (workoutIdx === -1) workoutIdx = 0; // Take the next one in priority
+
+        const type = pool.splice(workoutIdx, 1)[0] || "easy";
         plannedStructure.push({ index: d, type });
-        if (type === "intervals" || type === "tempo") qCount++;
+
+        if (qualityTypes.includes(type)) qCount++;
         else eCount++;
-        workoutPtr++;
+
         assignedCount++;
     }
 

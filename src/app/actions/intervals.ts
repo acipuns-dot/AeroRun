@@ -9,6 +9,7 @@ const getHeaders = (apiKey: string) => {
     return {
         Authorization: `Basic ${auth}`,
         "Content-Type": "application/json",
+        "Accept": "application/json",
     };
 };
 
@@ -56,21 +57,27 @@ async function getCredentials() {
         throw new Error("API Key is missing in your profile.");
     }
 
-    // SANITIZATION: Keep the 'i' prefix if present, as most modern accounts require it.
+    // SANITIZATION: Trim whitespace and handle prefixes
     const sanitizedId = profile.intervals_athlete_id.trim();
+    const sanitizedApiKey = profile.intervals_api_key.trim();
 
     if (!sanitizedId) {
         throw new Error(`Invalid Athlete ID format: "${profile.intervals_athlete_id}".`);
     }
 
+    if (!sanitizedApiKey) {
+        throw new Error("API Key is empty after trimming. Please re-enter it in Settings.");
+    }
+
     console.log("[getCredentials] Success:", {
         athleteId: sanitizedId,
-        apiKeyLength: profile.intervals_api_key.length
+        apiKeyLength: sanitizedApiKey.length,
+        originalApiKeyLength: profile.intervals_api_key.length
     });
 
     return {
         athleteId: sanitizedId,
-        apiKey: profile.intervals_api_key
+        apiKey: sanitizedApiKey
     };
 }
 
@@ -88,13 +95,38 @@ export async function getActivitiesAction() {
 
         const { athleteId, apiKey } = credentialsResult.credentials!;
 
+        // COMPREHENSIVE AUTH TEST
+        const numericId = athleteId.startsWith('i') ? athleteId.substring(1) : athleteId;
+        const trials = [
+            { name: 'Standard Identity (API_KEY:key)', user: 'API_KEY', id: 'me', customUrl: `${INTERVALS_BASE_URL}/athlete/me` },
+            { name: 'Athlete ID 0 Test', user: 'API_KEY', id: '0' },
+        ];
+
+        for (const trial of trials) {
+            try {
+                const testAuth = Buffer.from(`${trial.user}:${apiKey}`).toString("base64");
+                const testUrl = (trial as any).customUrl || `${INTERVALS_BASE_URL}/athlete/${trial.id}/activities?limit=1`;
+                const res = await fetch(testUrl, {
+                    headers: { 'Authorization': `Basic ${testAuth}` },
+                    cache: 'no-store'
+                });
+                console.log(`[AuthTest] ${trial.name} -> Status: ${res.status}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    console.log(`[AuthTest] SUCCESS FOUND! Data:`, JSON.stringify(data).substring(0, 100));
+                }
+            } catch (e: any) {
+                console.error(`[AuthTest] ${trial.name} failed with exception:`, e.message);
+            }
+        }
+
         // Calculate date 6 months ago for the 'oldest' parameter
         const sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
         const oldestDate = sixMonthsAgo.toISOString().split('T')[0];
 
-        const url = `${INTERVALS_BASE_URL}/athlete/${athleteId}/activities?oldest=${oldestDate}`;
-        console.log('[Server Action] Fetching from:', url);
+        const url = `${INTERVALS_BASE_URL}/athlete/0/activities?oldest=${oldestDate}`;
+        console.log('[Server Action] Fetching from standard path (ID 0):', url);
 
         const response = await fetch(url, {
             headers: getHeaders(apiKey),
@@ -111,10 +143,13 @@ export async function getActivitiesAction() {
             if (response.status === 401) {
                 return { data: [], error: "Authentication failed. Please verify your API Key in Settings." };
             }
+            if (response.status === 403) {
+                return { data: [], error: `Intervals.icu Forbidden (403): ${errorText || "Access denied. Check your API permissions in Intervals.icu settings."}` };
+            }
             if (response.status === 404) {
                 return { data: [], error: "Athlete not found. Please verify your Athlete ID in Settings." };
             }
-            return { data: [], error: `Intervals.icu API Error: ${response.status}` };
+            return { data: [], error: `Intervals.icu API Error: ${response.status} - ${errorText.substring(0, 100)}` };
         }
 
         const data = await response.json();

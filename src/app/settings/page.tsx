@@ -112,9 +112,9 @@ export default function Settings() {
 
     const startEditing = () => {
         if (!profile) return;
-        setEditHeight(profile.height.toString());
-        setEditWeight(profile.weight.toString());
-        setEdit5kTime(profile.best_5k_time);
+        setEditHeight(profile.height?.toString() || "");
+        setEditWeight(profile.weight?.toString() || "");
+        setEdit5kTime(profile.best_5k_time || "");
         setEditAthleteId(profile.intervals_athlete_id || "");
         setEditApiKey(profile.intervals_api_key || "");
         setIsEditingProfile(true);
@@ -681,6 +681,10 @@ export default function Settings() {
                                     onClick={() => {
                                         setEditAthleteId(profile?.intervals_athlete_id || "");
                                         setEditApiKey(profile?.intervals_api_key || "");
+                                        // Initialize other fields to prevent overwriting with empty/NaN
+                                        setEditHeight(profile?.height?.toString() || "");
+                                        setEditWeight(profile?.weight?.toString() || "");
+                                        setEdit5kTime(profile?.best_5k_time || "");
                                         setIsConnectingIntervals(true);
                                     }}
                                     className="flex items-center space-x-4 text-left"

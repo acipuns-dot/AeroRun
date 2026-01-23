@@ -13,7 +13,7 @@ export default function Plan() {
     const [expandedWeek, setExpandedWeek] = useState<number | null>(1);
 
     if (isLoading) return (
-        <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0A0A0A] via-[#111111] to-[#0A0A0A]">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
     );

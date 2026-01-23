@@ -96,13 +96,13 @@ export default function ActivityDetail() {
     }, [params.id, activities, isContextLoading]);
 
     if (isLoading) return (
-        <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0A0A0A] via-[#111111] to-[#0A0A0A]">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
     );
 
     if (!activity) return (
-        <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0A0A0A] via-[#111111] to-[#0A0A0A]">
             <div className="text-center">
                 <p className="text-white/40">Activity not found</p>
                 <button onClick={() => router.back()} className="mt-4 text-primary">Go Back</button>

@@ -263,7 +263,13 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
         let weekMultiplier = 1;
         const progress = w / totalWeeks;
 
-        if (w === 1) weekMultiplier = 0.5; // Starter Week: Very conservative
+        if (w === 1) {
+            // --- UNIVERSAL CONSERVATION PRINCIPLE ---
+            // Every plan starts at 50% of peak volume in Week 1.
+            // This applies to ALL levels (Beginner to Elite) to allow
+            // structural adaptation (tendons/ligaments) regardless of cardiovascular fitness.
+            weekMultiplier = 0.5;
+        }
         else if (w === 2) weekMultiplier = 0.65;
         else if (w % 4 === 0) weekMultiplier = 0.7;
         else if (w > totalWeeks - 1) weekMultiplier = 0.3;
@@ -434,7 +440,9 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                 };
             }
 
-            // Override type for Week 1 Quality Conversions
+            // --- WEEK 1 SAFETY: INTRO CONVERSION ---
+            // For Week 1, we convert all potentially high-impact workouts
+            // (Intervals, Tempo, Long) to "Easy" for all fitness levels.
             const finalType = w === 1 && (t.type === "intervals" || t.type === "tempo" || t.type === "long")
                 ? "easy"
                 : t.type;

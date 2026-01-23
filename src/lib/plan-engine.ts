@@ -211,11 +211,11 @@ function buildDynamicStructure(stats: UserStats): DayTemplate[] {
         assignedCount++;
     }
 
-    // 3. Ratios (DNA: 20% Quality, 35% Easy, 45% Long)
-    // Redstributed for higher safety across all levels (80/20 rule).
+    // 3. Ratios (DNA: 20% Quality, 50% Easy, 30% Long)
+    // Safe distribution following 80/20 and "30% Long Run" rules.
     const Q_RATIO = 0.20;
-    const E_RATIO = 0.35;
-    const L_RATIO = hasLong ? 0.45 : 0;
+    const E_RATIO = 0.50;
+    const L_RATIO = hasLong ? 0.30 : 0;
 
     // Redstribute if any count is 0
     let adjQRat = qCount > 0 ? Q_RATIO : 0;

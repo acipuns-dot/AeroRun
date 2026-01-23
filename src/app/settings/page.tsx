@@ -65,23 +65,46 @@ export default function Settings() {
     const handleUpdateProfile = async () => {
         if (!profile) return;
         setSaving(true);
-        try {
-            const { error } = await supabase
-                .from("profiles")
-                .update({
-                    height: parseFloat(editHeight),
-                    weight: parseFloat(editWeight),
-                    best_5k_time: edit5kTime,
-                    intervals_athlete_id: editAthleteId,
-                    intervals_api_key: editApiKey
-                })
-                .eq("id", profile.id);
 
-            if (error) throw error;
+        console.log('[Settings] Starting profile update:', {
+            profileId: profile.id,
+            editHeight,
+            editWeight,
+            edit5kTime
+        });
+
+        try {
+            const updateData = {
+                height: parseFloat(editHeight),
+                weight: parseFloat(editWeight),
+                best_5k_time: edit5kTime,
+                intervals_athlete_id: editAthleteId,
+                intervals_api_key: editApiKey
+            };
+
+            console.log('[Settings] Updating profile with:', updateData);
+
+            const { data: updatedData, error } = await supabase
+                .from("profiles")
+                .update(updateData)
+                .eq("id", profile.id)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('[Settings] Update error:', error);
+                throw error;
+            }
+
+            console.log('[Settings] Profile updated successfully:', updatedData);
+            console.log('[Settings] Refreshing data...');
+
             await refreshData();
+
+            console.log('[Settings] Data refresh complete');
             setIsEditingProfile(false);
         } catch (error: any) {
-            console.error("Error updating profile:", error);
+            console.error("[Settings] Error updating profile:", error);
             alert("Failed to update profile: " + error.message);
         }
         setSaving(false);

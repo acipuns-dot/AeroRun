@@ -18,7 +18,7 @@ const LiveMap = dynamic(() => import("@/components/LiveMap"), {
 });
 
 export default function RecordPage() {
-    const { profile } = useContext(DataContext)!;
+    const { profile, refreshData } = useContext(DataContext)!;
     const {
         isRunning,
         path,
@@ -79,6 +79,7 @@ export default function RecordPage() {
             });
 
             if (result.success || localResult.success) {
+                await refreshData();
                 router.push("/activities");
             } else {
                 setSaveError("Failed to save activity locally or to Intervals.icu");

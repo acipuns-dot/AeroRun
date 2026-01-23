@@ -152,7 +152,7 @@ export function useRunTracker(userWeightKg: number = 70) {
 
                 setCurrentLocation(newPoint);
 
-                if (!isRunning) return;
+                if (!isRunningRef.current) return;
 
                 if (lastLocationRef.current) {
                     const dist = getDistanceFromLatLonInMeters(
@@ -165,7 +165,7 @@ export function useRunTracker(userWeightKg: number = 70) {
                     const timeDiff = (newPoint.timestamp - lastLocationRef.current.timestamp) / 1000;
                     const calculatedSpeed = timeDiff > 0 ? dist / timeDiff : 0;
 
-                    if (dist > 2 && calculatedSpeed < 12) {
+                    if (dist > 1.5 && calculatedSpeed < 12) {
                         setDistance((prev) => {
                             const newTotal = prev + dist;
                             const kcal = (newTotal / 1000) * userWeightKg * 1.036;

@@ -65,9 +65,19 @@ export default function Home() {
   const progressData = calculateTotalProgress();
 
   const handleOnboardingComplete = async (data: any) => {
-    if (!session) return;
+    if (!session) {
+      console.error('[Onboarding] No session found');
+      return;
+    }
+
+    console.log('[Onboarding] Starting to save profile data:', {
+      userId: session.user.id,
+      email: session.user.email,
+      data
+    });
+
     try {
-      const { error } = await supabase.from("profiles").upsert({
+      const profileData = {
         id: session.user.id,
         email: session.user.email,
         height: parseFloat(data.height),
@@ -76,13 +86,30 @@ export default function Home() {
         best_5k_time: data.best5k,
         training_level: data.level,
         onboarded: true,
-      });
+      };
 
-      if (error) throw error;
+      console.log('[Onboarding] Upserting profile:', profileData);
+
+      const { data: upsertedData, error } = await supabase
+        .from("profiles")
+        .upsert(profileData, { onConflict: 'id' })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('[Onboarding] Upsert error:', error);
+        throw error;
+      }
+
+      console.log('[Onboarding] Profile saved successfully:', upsertedData);
+      console.log('[Onboarding] Refreshing data...');
+
       await refreshData();
+
+      console.log('[Onboarding] Data refresh complete');
     } catch (err: any) {
-      console.error(err);
-      alert("Error saving profile: " + err.message);
+      console.error('[Onboarding] Error saving profile:', err);
+      alert("Error saving profile: " + (err.message || 'Unknown error'));
     }
   };
 

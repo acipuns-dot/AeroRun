@@ -135,7 +135,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             activities,
             activitiesError,
             isLoading,
-            refreshData: () => fetchData()
+            refreshData: async () => {
+                const { data: { session: currentSession } } = await supabase.auth.getSession();
+                await fetchData(currentSession);
+            }
         }}>
             {children}
         </DataContext.Provider>

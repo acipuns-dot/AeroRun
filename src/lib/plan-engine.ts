@@ -572,7 +572,7 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                     break;
             }
 
-            const duration = t.type === "rest" ? 0 : Math.round(dist * (paceSec / 60)) + 10;
+            const duration = t.type === "rest" ? 0 : Math.round(finalDist * (paceSec / 60)) + 10;
 
             if (w === totalWeeks && t.day === "Day 7") {
                 return {

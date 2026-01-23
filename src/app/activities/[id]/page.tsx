@@ -5,10 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { getActivityDetailsAction, getActivityStreamsAction } from "@/app/actions/intervals";
 import BottomNav from "@/components/BottomNav";
 import { motion } from "framer-motion";
-import { ArrowLeft, MapPin, Clock, Zap, TrendingUp, Heart, Activity as ActivityIcon, Mountain } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, Zap, TrendingUp, Heart, Activity as ActivityIcon, Mountain, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useData } from "@/context/DataContext";
 import dynamic from "next/dynamic";
+import { deleteActivityAction } from "@/app/actions/activities";
+import { AnimatePresence } from "framer-motion";
+import { useState as useReactState } from "react";
 
 const Map = dynamic(() => import("@/components/Map"), {
     ssr: false,
@@ -23,6 +26,9 @@ export default function ActivityDetail() {
     const [isLoading, setIsLoading] = useState(true);
     const [streamsLoading, setStreamsLoading] = useState(false);
     const [coordinates, setCoordinates] = useState<[number, number][]>([]);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const { refreshData } = useData();
 
     useEffect(() => {
         const loadActivity = async () => {
@@ -134,8 +140,27 @@ export default function ActivityDetail() {
     const paceMin = Math.floor(avgPaceMinPerKm);
     const paceSec = Math.round((avgPaceMinPerKm - paceMin) * 60);
 
+    const handleDelete = async () => {
+        setIsDeleting(true);
+        try {
+            const result = await deleteActivityAction(activity.id, activity.intervals_id);
+            if (result.success) {
+                await refreshData();
+                router.push("/activities");
+            } else {
+                alert(result.error || "Failed to delete activity");
+            }
+        } catch (err) {
+            console.error("Deletion error:", err);
+            alert("An unexpected error occurred");
+        } finally {
+            setIsDeleting(false);
+            setShowDeleteModal(false);
+        }
+    };
+
     return (
-        <div className="min-h-screen pb-32">
+        <div className="min-h-screen pb-32 relative">
             {/* Header */}
             <div className="p-6 flex items-center space-x-4">
                 <button
@@ -249,7 +274,71 @@ export default function ActivityDetail() {
                         <p className="text-white/80">{activity.description}</p>
                     </div>
                 )}
+
+                {/* Delete Activity Button */}
+                <div className="pt-8 pb-12">
+                    <button
+                        onClick={() => setShowDeleteModal(true)}
+                        className="w-full py-4 rounded-3xl bg-red-500/5 border border-red-500/20 text-red-500 font-black uppercase text-xs tracking-widest hover:bg-red-500/10 active:scale-95 transition-all flex items-center justify-center space-x-3"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        <span>Delete Activity</span>
+                    </button>
+                    <p className="text-center text-[10px] text-white/20 uppercase font-bold tracking-[0.2em] mt-4">This action cannot be undone</p>
+                </div>
             </div>
+
+            {/* Premium Delete Confirmation Modal */}
+            <AnimatePresence>
+                {showDeleteModal && (
+                    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                            onClick={() => !isDeleting && setShowDeleteModal(false)}
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="bg-[#111] border border-white/10 rounded-[32px] p-8 w-full max-w-sm relative z-10 shadow-2xl"
+                        >
+                            <div className="text-center space-y-4">
+                                <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <Trash2 className="w-8 h-8 text-red-500" />
+                                </div>
+                                <h3 className="text-2xl font-black italic tracking-tighter uppercase">Delete Run?</h3>
+                                <p className="text-white/40 text-sm font-medium leading-relaxed">
+                                    Are you sure? This will permanently remove the activity from your history and Intervals.icu.
+                                </p>
+
+                                <div className="grid grid-cols-2 gap-4 pt-6">
+                                    <button
+                                        disabled={isDeleting}
+                                        onClick={() => setShowDeleteModal(false)}
+                                        className="py-4 rounded-2xl bg-white/5 border border-white/5 text-white/60 font-black uppercase text-xs tracking-widest hover:bg-white/10 transition-colors disabled:opacity-50"
+                                    >
+                                        Keep It
+                                    </button>
+                                    <button
+                                        disabled={isDeleting}
+                                        onClick={handleDelete}
+                                        className="py-4 rounded-2xl bg-red-500 text-white font-black uppercase text-xs tracking-widest shadow-[0_0_30px_rgba(239,68,68,0.2)] hover:scale-105 active:scale-95 transition-all flex items-center justify-center disabled:opacity-50"
+                                    >
+                                        {isDeleting ? (
+                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        ) : (
+                                            "Confirm"
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             <BottomNav />
         </div>

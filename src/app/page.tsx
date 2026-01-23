@@ -187,7 +187,7 @@ export default function Home() {
   if (isLoading) {
     console.log('[Home] Still loading...');
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0A0A0A] via-[#111111] to-[#0A0A0A]">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );

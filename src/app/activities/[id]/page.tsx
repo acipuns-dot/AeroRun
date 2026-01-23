@@ -133,12 +133,12 @@ export default function ActivityDetail() {
         </div>
     );
 
-    const distanceKm = (activity.distance / 1000).toFixed(2);
-    const durationMin = Math.floor(activity.moving_time / 60);
-    const durationSec = activity.moving_time % 60;
-    const avgPaceMinPerKm = activity.distance > 0 ? (activity.moving_time / 60) / (activity.distance / 1000) : 0;
-    const paceMin = Math.floor(avgPaceMinPerKm);
-    const paceSec = Math.round((avgPaceMinPerKm - paceMin) * 60);
+    const distanceKm = ((activity?.distance || 0) / 1000).toFixed(2);
+    const durationMin = Math.floor((activity?.moving_time || 0) / 60);
+    const durationSec = (activity?.moving_time || 0) % 60;
+    const avgPaceMinPerKm = activity?.distance > 0 ? (activity?.moving_time / 60) / (activity?.distance / 1000) : 0;
+    const paceMin = Math.floor(avgPaceMinPerKm) || 0;
+    const paceSec = Math.round((avgPaceMinPerKm - (paceMin || 0)) * 60) || 0;
 
     const handleDelete = async () => {
         setIsDeleting(true);
@@ -165,6 +165,25 @@ export default function ActivityDetail() {
 
     return (
         <div className="min-h-screen pb-32 relative">
+            <AnimatePresence>
+                {isDeleting && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[1100] bg-black/60 backdrop-blur-md flex items-center justify-center p-6"
+                    >
+                        <div className="text-center space-y-6">
+                            <div className="w-20 h-20 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto shadow-[0_0_30px_rgba(34,211,238,0.2)]" />
+                            <div className="space-y-2">
+                                <h3 className="text-2xl font-black italic tracking-tighter uppercase text-primary">DELETING RUN...</h3>
+                                <p className="text-white/40 text-xs font-black uppercase tracking-[0.2em]">Removing from all platforms</p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Header */}
             <div className="p-6 flex items-center space-x-4">
                 <button

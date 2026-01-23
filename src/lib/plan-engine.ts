@@ -107,7 +107,9 @@ function getCalculatedPaces(best5k: string) {
 
 // --- TEMPLATES ---
 
-type WorkoutType = "easy" | "long" | "intervals" | "tempo" | "rest" | "hills" | "race";
+type WorkoutType = "easy" | "long" | "intervals" | "tempo" | "rest" | "hills" | "race" | "time-trial";
+
+type PlanPhase = "Foundation" | "Build" | "Assessment" | "Peak" | "Taper";
 
 interface DayTemplate {
     day: string;
@@ -160,44 +162,105 @@ function buildDynamicStructure(stats: UserStats): DayTemplate[] {
     };
     const longRunIndex = dayToIndex[longRunDay];
 
-    // Base workout types based on level (excluding long run, which is handled separately)
-    // Easy runs first for recovery, then quality sessions
+    // Priority-based workout sequence (DNA: Beginners get intensity but fewer sessions)
     const workoutPriority: WorkoutType[] = stats.goal === "beginner"
-        ? ["easy", "intervals", "easy"]
+        ? ["intervals", "tempo", "easy", "easy"]
         : stats.goal === "intermediate"
-            ? ["easy", "intervals", "tempo", "easy"]
-            : ["easy", "intervals", "tempo", "easy", "easy"];
+            ? ["intervals", "tempo", "easy", "easy", "easy"]
+            : ["intervals", "tempo", "intervals", "easy", "easy", "easy"];
 
-    // Build the 7-day week (Sunday to Saturday)
-    const week: DayTemplate[] = [];
+    // 1. Identify active days
+    const activeDays: number[] = [];
     const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-    let workoutIndex = 0;
 
     for (let i = 0; i < 7; i++) {
-        const dayName = `Day ${i + 1}`;
         const fullDayName = dayNames[i];
-
-        // Check if this day is available for running
-        const isDayAvailable = selectedRunDays.length > 0
-            ? selectedRunDays.includes(fullDayName)
-            : true; // If no specific days selected, all days are available
-
-        if (i === longRunIndex && isDayAvailable) {
-            // Long run day
-            week.push({ day: dayName, type: "long", intensity: "high", distFactor: 0.35 });
-        } else if (isDayAvailable && workoutIndex < workoutPriority.length) {
-            // Running day - use the workout priority list
-            const type = workoutPriority[workoutIndex];
-            const distFactor = type === "intervals" ? 0.2 : type === "tempo" ? 0.2 : 0.15;
-            week.push({ day: dayName, type, intensity: type === "easy" ? "easy" : "high", distFactor });
-            workoutIndex++;
+        if (selectedRunDays.length > 0) {
+            if (selectedRunDays.includes(fullDayName)) activeDays.push(i);
         } else {
-            // Rest day
-            week.push({ day: dayName, type: "rest", intensity: "easy", distFactor: 0 });
+            // Default to spread if no days selected
+            activeDays.push(i);
+        }
+    }
+
+    // 2. Count Quality, Easy, and Long days
+    let qCount = 0;
+    let eCount = 0;
+    const hasLong = activeDays.includes(longRunIndex);
+
+    const plannedStructure: { index: number, type: WorkoutType }[] = [];
+
+    // Assign Long Run first
+    if (hasLong) {
+        plannedStructure.push({ index: longRunIndex, type: "long" });
+    }
+
+    // Assign others from priority until activeDays or daysPerWeek exhausted
+    const otherActiveDays = activeDays.filter(d => d !== longRunIndex);
+    let assignedCount = hasLong ? 1 : 0;
+    let workoutPtr = 0;
+
+    for (const d of otherActiveDays) {
+        if (assignedCount >= daysPerWeek) break;
+        const type = workoutPriority[workoutPtr] || "easy";
+        plannedStructure.push({ index: d, type });
+        if (type === "intervals" || type === "tempo") qCount++;
+        else eCount++;
+        workoutPtr++;
+        assignedCount++;
+    }
+
+    // 3. Ratios (DNA: 35% Quality, 25% Easy, 40% Long)
+    const Q_RATIO = 0.35;
+    const E_RATIO = 0.25;
+    const L_RATIO = hasLong ? 0.40 : 0;
+
+    // Redstribute if any count is 0
+    let adjQRat = qCount > 0 ? Q_RATIO : 0;
+    let adjERat = eCount > 0 ? E_RATIO : 0;
+    let adjLRat = hasLong ? L_RATIO : 0;
+
+    // Normalization
+    const totalRatio = adjQRat + adjERat + adjLRat;
+    adjQRat /= totalRatio;
+    adjERat /= totalRatio;
+    adjLRat /= totalRatio;
+
+    // Build the 7-day week
+    const week: DayTemplate[] = [];
+    for (let i = 0; i < 7; i++) {
+        const dayPlan = plannedStructure.find(p => p.index === i);
+        if (dayPlan) {
+            let distFactor = 0;
+            if (dayPlan.type === "long") distFactor = adjLRat;
+            else if (dayPlan.type === "intervals" || dayPlan.type === "tempo") distFactor = adjQRat / qCount;
+            else distFactor = adjERat / eCount;
+
+            week.push({
+                day: `Day ${i + 1}`,
+                type: dayPlan.type,
+                intensity: (dayPlan.type === "easy" || dayPlan.type === "rest") ? "easy" : "high",
+                distFactor
+            });
+        } else {
+            week.push({ day: `Day ${i + 1}`, type: "rest", intensity: "easy", distFactor: 0 });
         }
     }
 
     return week;
+}
+
+// --- ENGINE UTILS ---
+
+/**
+ * Determines training phase based on Runna logic.
+ */
+function getPhase(week: number, total: number): PlanPhase {
+    if (week <= 2) return "Foundation";
+    if (week === 8) return "Assessment";
+    if (week >= total - 1) return "Taper";
+    if (week < 8) return "Build";
+    return "Peak";
 }
 
 /**
@@ -236,15 +299,15 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
     // Gap: Positive = Goal requires HIGHER VDOT (ambitious)
     const ambitiousVDOTGap = goalVDOT - currentVDOT;
 
-    // Base weeks by distance (Beginner-friendly scaling)
+    // Base weeks by distance (Optimized for Runna-style phasing)
     const baseWeeks: Record<string, number> = {
-        "5km": 12,
-        "10km": 14,
+        "5km": 13,
+        "10km": 13,
         "Half Marathon": 16,
         "Full Marathon": 18
     };
 
-    let totalWeeks = baseWeeks[stats.targetDistance] || 12;
+    let totalWeeks = baseWeeks[stats.targetDistance] || 13;
 
     // If goal VDOT is significantly higher than current VDOT, extend the plan
     if (ambitiousVDOTGap > 5) { // Extremely ambitious (+5 VDOT levels is huge)
@@ -253,36 +316,57 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
         totalWeeks = stats.targetDistance === "Full Marathon" ? 22 : 18;
     }
 
-    const baseKm = stats.goal === "beginner" ? 20 : stats.goal === "intermediate" ? 35 : 55;
-    const multMap = { "5km": 1.4, "10km": 1.7, "Half Marathon": 2.2, "Full Marathon": 2.8 } as const;
-    const peakKm = baseKm * (multMap[stats.targetDistance as keyof typeof multMap] || 1.4);
+    const baseKm = stats.goal === "beginner" ? 18 : stats.goal === "intermediate" ? 35 : 55;
+    const multMap = { "5km": 1.3, "10km": 1.6, "Half Marathon": 2.2, "Full Marathon": 2.8 } as const;
+    let peakKm = baseKm * (multMap[stats.targetDistance as keyof typeof multMap] || 1.3);
+
+    // --- LEVEL-BASED VOLUME CAPS ---
+    if (stats.goal === "beginner") {
+        if (stats.targetDistance === "5km") peakKm = Math.min(peakKm, 25);
+        if (stats.targetDistance === "10km") peakKm = Math.min(peakKm, 35);
+    }
 
     const weeks = [];
 
     for (let w = 1; w <= totalWeeks; w++) {
+        const phase = getPhase(w, totalWeeks);
         let weekMultiplier = 1;
         const progress = w / totalWeeks;
 
-        if (w === 1) {
-            // --- UNIVERSAL CONSERVATION PRINCIPLE ---
-            // Week 1: Foundation (50%). Allows structural adaptation for all levels.
-            weekMultiplier = 0.5;
-        } else if (w === 2) {
-            // Week 2: Build (60%). Gradual increase to maintain safety.
-            weekMultiplier = 0.6;
-        } else if (w % 4 === 0 && w < totalWeeks - 2) {
-            // Recovery/Deload: Every 4th week (approx 20-30% drop from previous peak)
-            weekMultiplier = 0.7;
-        } else if (w >= totalWeeks - 1) {
-            // Taper Phase: Sharp drop for race readiness
-            weekMultiplier = w === totalWeeks ? 0.3 : 0.5;
-        } else {
-            // General Progression: Gradual ramp from 0.7 to 1.0 (Peak)
-            const growthPhase = w / (totalWeeks - 2);
-            weekMultiplier = 0.7 + (growthPhase * 0.3);
+        // --- PHASE-BASED VOLUME MODIFIERS ---
+        switch (phase) {
+            case "Foundation":
+                // Week 1: 50%, Week 2: 60%
+                weekMultiplier = 0.4 + (w * 0.1);
+                break;
+            case "Build":
+                // Gradual growth from 0.7 to 0.9 before Benchmark
+                const buildPhaseProgress = (w - 2) / (8 - 2);
+                weekMultiplier = 0.7 + (buildPhaseProgress * 0.2);
+                break;
+            case "Assessment":
+                // Drop volume for Time Trial (Benchmark)
+                weekMultiplier = 0.65;
+                break;
+            case "Peak":
+                // Reach 1.0 peak (with extra damping for non-performance plans handled later)
+                const peakPhaseProgress = (w - 8) / (totalWeeks - 2 - 8);
+                weekMultiplier = 0.9 + (peakPhaseProgress * 0.1);
+                break;
+            case "Taper":
+                // Marathon has a 3-week taper, others 2 weeks
+                const taperWeeks = stats.targetDistance === "Full Marathon" ? 3 : 2;
+                const taperIndex = w - (totalWeeks - taperWeeks); // 1, 2, or 3
+
+                if (taperWeeks === 3) {
+                    weekMultiplier = taperIndex === 1 ? 0.7 : taperIndex === 2 ? 0.5 : 0.3;
+                } else {
+                    weekMultiplier = taperIndex === 1 ? 0.5 : 0.3;
+                }
+                break;
         }
 
-        // --- HEALTH VARIANT SCALING ---
+        // --- VARIANT SCALING ---
         if (variant === "performance") weekMultiplier *= 1.1;
         if (variant === "health") {
             weekMultiplier *= 0.85; // Lower overall floor for health-focused plans
@@ -319,6 +403,13 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
 
             let structuredWorkout = "";
 
+            // --- PHASE LABELING ---
+            const typeLabel = t.type.charAt(0).toUpperCase() + t.type.slice(1);
+            const phaseSuffix = phase === "Foundation" ? " (Foundation)" :
+                phase === "Assessment" ? " (Assessment)" :
+                    phase === "Taper" ? " (Taper)" : "";
+            const workoutTitle = `${typeLabel}${phaseSuffix}`;
+
             switch (t.type) {
                 case "easy": {
                     const easyRange = weeklyPaces.easy.max - weeklyPaces.easy.min;
@@ -328,7 +419,12 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                     targetPace = secondsToPace(paceSec);
                     const easyPace = secondsToPace(weeklyPaces.easy.max);
                     hrZone = "Zone 2";
-                    description = `- 5m Warmup Pace: ${easyPace}\n- ${Math.round(finalDist * 10) / 10}km Easy Run Pace: ${targetPace}\n- 5m Cooldown Pace: ${easyPace}\n- HR: ${hrZone}`;
+
+                    let phaseDescription = "Focus on recovery and building your aerobic base.";
+                    if (phase === "Foundation") phaseDescription = "Low impact to let your body adapt to the new plan.";
+                    if (phase === "Taper") phaseDescription = "Short and easy to keep the legs moving while shedding fatigue.";
+
+                    description = `💡 ${workoutTitle}: ${phaseDescription}\n- 5m Warmup Pace: ${easyPace}\n- ${Math.round(finalDist * 10) / 10}km Easy Run Pace: ${targetPace}\n- 5m Cooldown Pace: ${easyPace}\n- HR: ${hrZone}`;
                     structuredWorkout = `Warmup\n- 5m ${easyPace}\n\nMain Set\n- ${Math.round(finalDist * 10) / 10}km ${targetPace}\n\nCooldown\n- 5m ${easyPace}`;
                     break;
                 }
@@ -349,15 +445,27 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                         targetPace = secondsToPace(weeklyPaces.long.min);
                         hrZone = "Zone 2-3";
 
-                        if (stats.targetDistance === "Full Marathon" || stats.targetDistance === "Half Marathon") {
-                            if (w > 6 && !isTaper && w % 2 === 0) {
-                                const easyDist = Math.round(finalDist * 0.7 * 10) / 10;
-                                const raceDist = Math.round((finalDist - easyDist) * 10) / 10;
-                                const racePace = secondsToPace(paceSec * 0.95);
-                                description = `- 5m Warmup Pace: ${easyPace}\n- ${easyDist}km Easy Pace: ${targetPace}\n- ${raceDist}km @ Goal Race Pace: ${racePace}\n- 5m Cooldown Pace: ${easyPace}`;
-                                structuredWorkout = `Warmup\n- 5m ${easyPace}\n\nMain Set\n- ${easyDist}km ${targetPace}\n- ${raceDist}km ${racePace}\n\nCooldown\n- 5m ${easyPace}`;
+                        if (stats.targetDistance === "Full Marathon") {
+                            // Marathon Pace blocks in peak weeks
+                            if (phase === "Peak" && w % 2 === 0) {
+                                const mpPace = secondsToPace(paceSec * 0.92); // Approx 8% faster than long run
+                                const easyDist = Math.round(finalDist * 0.6 * 10) / 10;
+                                const mpDist = Math.round((finalDist - easyDist) * 10) / 10;
+                                description = `🏃 MARATHON PACE BLOCK\n- 5m Warmup: ${easyPace}\n- ${easyDist}km Easy: ${targetPace}\n- ${mpDist}km @ Goal Marathon Pace: ${mpPace}\n- 5m Cooldown: ${easyPace}`;
+                                structuredWorkout = `Warmup\n- 5m ${easyPace}\n\nMain Set\n- ${easyDist}km ${targetPace}\n- ${mpDist}km ${mpPace}\n\nCooldown\n- 5m ${easyPace}`;
                             } else {
-                                description = `- 5m Warmup Pace: ${easyPace}\n- ${Math.round(finalDist * 10) / 10}km Steady Long Run Pace: ${targetPace}\n- 5m Cooldown Pace: ${easyPace}`;
+                                description = `- 5m Warmup: ${easyPace}\n- ${Math.round(finalDist * 10) / 10}km Steady Long Run: ${targetPace}\n- 5m Cooldown: ${easyPace}`;
+                                structuredWorkout = `Warmup\n- 5m ${easyPace}\n\nMain Set\n- ${Math.round(finalDist * 10) / 10}km ${targetPace}\n\nCooldown\n- 5m ${easyPace}`;
+                            }
+                        } else if (stats.targetDistance === "Half Marathon") {
+                            if (phase === "Peak" && w % 3 === 0) {
+                                const hmPace = secondsToPace(paceSec * 0.94);
+                                const easyDist = Math.round(finalDist * 0.7 * 10) / 10;
+                                const hmDist = Math.round((finalDist - easyDist) * 10) / 10;
+                                description = `🏃 HALF MARATHON PACE FINISH\n- 5m Warmup: ${easyPace}\n- ${easyDist}km Easy: ${targetPace}\n- ${hmDist}km @ Goal HM Pace: ${hmPace}\n- 5m Cooldown: ${easyPace}`;
+                                structuredWorkout = `Warmup\n- 5m ${easyPace}\n\nMain Set\n- ${easyDist}km ${targetPace}\n- ${hmDist}km ${hmPace}\n\nCooldown\n- 5m ${easyPace}`;
+                            } else {
+                                description = `- 5m Warmup: ${easyPace}\n- ${Math.round(finalDist * 10) / 10}km Long Run: ${targetPace}\n- 5m Cooldown: ${easyPace}`;
                                 structuredWorkout = `Warmup\n- 5m ${easyPace}\n\nMain Set\n- ${Math.round(finalDist * 10) / 10}km ${targetPace}\n\nCooldown\n- 5m ${easyPace}`;
                             }
                         } else {
@@ -388,19 +496,21 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                         let reps = stats.goal === "beginner" ? 6 : stats.goal === "intermediate" ? 8 : 12;
                         reps = Math.round(reps * workoutScale);
 
-                        if (isSpeedDay) {
+                        if (phase === "Taper") {
+                            // Taper Intervals: Maintain intensity, drop volume by 50%
+                            const taperReps = Math.max(2, Math.round(reps * 0.5));
+                            description = `🔥 TAPER INTERVALS (Speed Maintenance)\n- 5m Warmup Pace: ${easyPace}\n${taperReps}x\n- 400m Pace: ${targetPace}\n- 2m Recovery\n- 5m Cooldown Pace: ${easyPace}\n- HR: ${hrZone}`;
+                            structuredWorkout = `Warmup\n- 5m ${easyPace}\n\nMain Set ${taperReps}x\n- 400m ${targetPace}\n- 2m recovery\n\nCooldown\n- 5m ${easyPace}`;
+                        } else if (isSpeedDay) {
                             description = `- 5m Warmup Pace: ${easyPace}\n${reps}x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown Pace: ${easyPace}\n- HR: ${hrZone}`;
                             structuredWorkout = `Warmup\n- 5m ${easyPace}\n\nMain Set ${reps}x\n- 400m ${targetPace}\n- 90s recovery\n\nCooldown\n- 5m ${easyPace}`;
                         } else {
+                            // Steady State for HM/FM
                             const repDist = "1km";
                             const adjReps = Math.max(3, Math.round(reps * 0.5));
                             const threshPace = secondsToPace(weeklyPaces.tempo.max * paceSharpening);
-                            description = `- 5m Warmup Pace: ${easyPace}\n${adjReps}x\n- ${repDist} Pace: ${threshPace}\n- 2m Recovery\n- 5m Cooldown Pace: ${easyPace}\n- HR: Zone 4 (Threshold)`;
+                            description = `🛡️ STEADY STATE (Aerobic Power)\n- 5m Warmup Pace: ${easyPace}\n${adjReps}x\n- ${repDist} Pace: ${threshPace}\n- 2m Recovery\n- 5m Cooldown Pace: ${easyPace}\n- HR: Zone 4 (Threshold)`;
                             structuredWorkout = `Warmup\n- 5m ${easyPace}\n\nMain Set ${adjReps}x\n- ${repDist} ${threshPace}\n- 2m recovery\n\nCooldown\n- 5m ${easyPace}`;
-                        }
-                        if (isTaper) {
-                            description = `- 5m Warmup Pace: ${easyPace}\n4x\n- 400m Pace: ${targetPace}\n- 90s Recovery\n- 5m Cooldown Pace: ${easyPace}`;
-                            structuredWorkout = `Warmup\n- 5m ${easyPace}\n\nMain Set 4x\n- 400m ${targetPace}\n- 90s recovery\n\nCooldown\n- 5m ${easyPace}`;
                         }
                     }
                     break;
@@ -415,7 +525,7 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                         paceSec = weeklyPaces.easy.min + (easyRange * variation);
                         targetPace = secondsToPace(paceSec);
                         hrZone = "Zone 2";
-                        description = `- ${Math.round(finalDist * 10) / 10}km Easy Run (Intro) Pace: ${targetPace}\n- HR: ${hrZone}`;
+                        description = `💡 ${workoutTitle}: Foundation Week intro. Keeping it easy.\n- ${Math.round(finalDist * 10) / 10}km Easy Run (Intro) Pace: ${targetPace}\n- HR: ${hrZone}`;
                         structuredWorkout = `Warmup\n- ${Math.round(finalDist * 10) / 10}km ${targetPace}`;
                     } else {
                         paceSec = weeklyPaces.tempo.min * paceSharpening;
@@ -424,7 +534,7 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                         const tempoDist = Math.max(3, Math.round(finalDist * 0.75 * workoutScale));
                         const easyPace = secondsToPace(weeklyPaces.easy.max);
 
-                        description = `- 2km Warmup Pace: ${easyPace}\n- ${tempoDist}km Tempo Pace: ${targetPace}\n- 2km Cooldown Pace: ${easyPace}\n- HR: ${hrZone} (Comfortably Hard)`;
+                        description = `💡 ${workoutTitle}: Build your threshold and ability to hold speed.\n- 2km Warmup Pace: ${easyPace}\n- ${tempoDist}km Tempo Pace: ${targetPace}\n- 2km Cooldown Pace: ${easyPace}\n- HR: ${hrZone} (Comfortably Hard)`;
                         structuredWorkout = `Warmup\n- 2km ${easyPace}\n\nMain Set\n- ${tempoDist}km ${targetPace}\n\nCooldown\n- 2km ${easyPace}`;
                     }
                     break;
@@ -442,11 +552,31 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                 return {
                     day: t.day,
                     type: "race",
-                    description: `🏁 RACE DAY: ${stats.targetDistance}!`,
+                    description: `🏁 RACE DAY: Go out and smash your ${stats.targetDistance}! You've trained hard for this moment. Good luck!`,
                     distance: getDistanceKm(stats.targetDistance),
                     duration: 0,
                     target_pace: "GOAL PACE"
                 };
+            }
+
+            // --- BENCHMARK LOGIC (Week 8) ---
+            if (w === 8 && (t.type === "intervals" || t.type === "tempo")) {
+                return {
+                    day: t.day,
+                    type: "time-trial",
+                    description: `⏱️ BENCHMARK: 5k Time Trial\n- Warmup: 15m Easy\n- Main Set: 5km at MAXIMUM sustainable effort\n- Cooldown: 10m Easy\n- 💡 Reasoning: This mid-plan test helps us measure your progress and recalibrate your future targets.`,
+                    distance: 5,
+                    duration: 45,
+                    target_pace: "MAX EFFORT",
+                    structured_workout: `Warmup\n- 15m Easy\n\nMain Set\n- 5km Max Effort\n\nCooldown\n- 10m Easy`
+                };
+            }
+
+            // --- PACING SAFETY CHECK ---
+            // Ensure long run pace isn't faster than easy run pace for beginners to prevent burnout
+            if (stats.goal === "beginner" && t.type === "long") {
+                paceSec = Math.max(paceSec, weeklyPaces.easy.min);
+                targetPace = secondsToPace(paceSec);
             }
 
             // --- WEEK 1 SAFETY: INTRO CONVERSION ---
@@ -474,6 +604,15 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
     }
 
     return { weeks, total_weeks: totalWeeks };
+}
+
+/**
+ * Recalibrates the plan based on a benchmark result.
+ * Currently a placeholder for future adaptive integration.
+ */
+export async function recalibratePlan(vdot: number) {
+    // Logic will go here to update the user's data context and trigger a plan refresh
+    return { success: true, newVdot: vdot };
 }
 
 function getDistanceKm(dist: string): number {

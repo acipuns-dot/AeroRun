@@ -97,17 +97,19 @@ export async function deleteActivityAction(activityId: string, intervalsId?: str
 
         console.log("[Server Action] Activity deleted locally:", activityId);
 
-        // 2. Delete from Intervals.icu if ID exists
+        // 2. Delete from Intervals.icu if ID exists (Background Sync)
         if (intervalsId) {
-            console.log("[Server Action] Attempting sync deletion to Intervals.icu for ID:", intervalsId);
-            try {
-                // We'll import and use the existing delete action from intervals.ts
-                const { deleteWorkoutAction } = await import("./intervals");
-                const syncSuccess = await deleteWorkoutAction(intervalsId);
-                console.log("[Server Action] Intervals sync deletion success:", syncSuccess);
-            } catch (err) {
-                console.warn("[Server Action] Sync deletion failed (ignoring for local success):", err);
-            }
+            console.log("[Server Action] Backgrounding sync deletion to Intervals.icu for ID:", intervalsId);
+            // We deliberately do NOT await here to keep the UI snappy
+            (async () => {
+                try {
+                    const { deleteWorkoutAction } = await import("./intervals");
+                    await deleteWorkoutAction(intervalsId);
+                    console.log("[Server Action] Intervals background sync deletion success");
+                } catch (err) {
+                    console.warn("[Server Action] Background sync deletion failed:", err);
+                }
+            })();
         }
 
         return { success: true };

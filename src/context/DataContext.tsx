@@ -13,6 +13,7 @@ interface DataContextType {
     activitiesError: string | null;
     isLoading: boolean;
     refreshData: () => Promise<void>;
+    removeActivity: (activityId: string) => void;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -162,6 +163,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             refreshData: async () => {
                 const { data: { session: currentSession } } = await supabase.auth.getSession();
                 await fetchData(currentSession);
+            },
+            removeActivity: (activityId: string) => {
+                setActivities(prev => prev.filter(a => (a.id || a.uuid)?.toString() !== activityId.toString()));
             }
         }}>
             {children}

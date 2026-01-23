@@ -28,7 +28,7 @@ export default function ActivityDetail() {
     const [coordinates, setCoordinates] = useState<[number, number][]>([]);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const { refreshData } = useData();
+    const { refreshData, removeActivity } = useData();
 
     useEffect(() => {
         const loadActivity = async () => {
@@ -145,8 +145,12 @@ export default function ActivityDetail() {
         try {
             const result = await deleteActivityAction(activity.id, activity.intervals_id);
             if (result.success) {
-                await refreshData();
+                // Optimistic UI: Remove and redirect immediately
+                removeActivity(activity.id);
                 router.push("/activities");
+
+                // Refresh in background to sync any other changes
+                refreshData();
             } else {
                 alert(result.error || "Failed to delete activity");
             }

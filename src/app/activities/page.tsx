@@ -72,38 +72,47 @@ export default function Activities() {
                                 initial={{ x: -20, opacity: 0 }}
                                 animate={{ x: 0, opacity: 1 }}
                                 transition={{ delay: idx * 0.05 }}
-                                className="glass p-4 space-y-3 relative overflow-hidden group active:scale-98 transition-all cursor-pointer hover:border-primary/20"
+                                className="bg-[#111] border border-white/5 rounded-[28px] p-6 space-y-5 relative overflow-hidden group active:scale-98 transition-all cursor-pointer hover:border-primary/20"
                             >
                                 <div className="flex justify-between items-start">
-                                    <div className="space-y-1">
-                                        <p className="text-xs text-white/40 font-bold uppercase tracking-wider">
+                                    <div className="space-y-0.5">
+                                        <p className="text-[10px] text-white/30 font-bold uppercase tracking-[0.1em]">
                                             {format(new Date(activity.start_date), "EEEE, MMM d")}
                                         </p>
-                                        <h3 className="text-lg font-bold group-hover:text-primary transition-colors">
+                                        <h3 className="text-xl font-black italic tracking-tight group-hover:text-primary transition-colors">
                                             {activity.name || "Afternoon Run"}
                                         </h3>
                                     </div>
-                                    <div className="bg-primary/10 text-primary text-[10px] font-black px-2 py-1 rounded uppercase">
+                                    <div className="bg-white/5 border border-white/10 text-white/60 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
                                         {activity.type}
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="flex items-center space-x-2">
-                                        <MapPin className="w-4 h-4 text-white/20" />
-                                        <span className="text-sm font-bold">{(activity.distance / 1000).toFixed(2)}km</span>
+                                <div className="grid grid-cols-3 gap-2 pt-2">
+                                    <div className="flex flex-col space-y-1">
+                                        <div className="flex items-center space-x-1.5">
+                                            <MapPin className="w-3.5 h-3.5 text-primary" />
+                                            <span className="text-base font-black italic">{(activity.distance / 1000).toFixed(2)}</span>
+                                        </div>
+                                        <span className="text-[8px] text-white/20 uppercase font-bold tracking-widest leading-none">Km</span>
                                     </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Clock className="w-4 h-4 text-white/20" />
-                                        <span className="text-sm font-bold">{Math.floor(activity.moving_time / 60)}m</span>
+                                    <div className="flex flex-col space-y-1 border-x border-white/5 px-4">
+                                        <div className="flex items-center space-x-1.5">
+                                            <Clock className="w-3.5 h-3.5 text-white/40" />
+                                            <span className="text-base font-black italic">{Math.floor(activity.moving_time / 60)}</span>
+                                        </div>
+                                        <span className="text-[8px] text-white/20 uppercase font-bold tracking-widest leading-none">Min</span>
                                     </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Zap className="w-4 h-4 text-white/20" />
-                                        <span className="text-sm font-bold">{activity.average_heartrate || "--"} bpm</span>
+                                    <div className="flex flex-col space-y-1 pl-2">
+                                        <div className="flex items-center space-x-1.5">
+                                            <Zap className="w-3.5 h-3.5 text-orange-500" />
+                                            <span className="text-base font-black italic">{activity.average_heartrate || "--"}</span>
+                                        </div>
+                                        <span className="text-[8px] text-white/20 uppercase font-bold tracking-widest leading-none">Bpm</span>
                                     </div>
                                 </div>
 
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-20 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
                                     <ChevronRight className="w-5 h-5 text-primary" />
                                 </div>
                             </motion.div>

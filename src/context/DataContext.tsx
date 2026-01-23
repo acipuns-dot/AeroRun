@@ -12,7 +12,7 @@ interface DataContextType {
     activities: any[];
     activitiesError: string | null;
     isLoading: boolean;
-    refreshData: () => Promise<void>;
+    refreshData: (options?: { silent?: boolean }) => Promise<void>;
     removeActivity: (activityId: string) => void;
 }
 
@@ -26,14 +26,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const [activitiesError, setActivitiesError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const fetchData = async (currentSession?: any) => {
+    const fetchData = async (currentSession?: any, options?: { silent?: boolean }) => {
         console.log('[DataContext] fetchData - starting check...', {
             hasCurrentSession: !!currentSession,
             providedUserId: currentSession?.user?.id
         });
 
         try {
-            setIsLoading(true);
+            if (!options?.silent) setIsLoading(true);
             const activeSession = currentSession || (await supabase.auth.getSession()).data.session;
             console.log('[DataContext] fetchData - active session result:', {
                 hasSession: !!activeSession,
@@ -160,9 +160,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             activities,
             activitiesError,
             isLoading,
-            refreshData: async () => {
+            refreshData: async (options?: { silent?: boolean }) => {
                 const { data: { session: currentSession } } = await supabase.auth.getSession();
-                await fetchData(currentSession);
+                await fetchData(currentSession, options);
             },
             removeActivity: (activityId: string) => {
                 setActivities(prev => prev.filter(a => (a.id || a.uuid)?.toString() !== activityId.toString()));

@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import { Calendar as CalendarIcon, Target, TrendingUp, ChevronLeft, ChevronRight, CheckCircle2, Trash2, Trophy } from "lucide-react";
 import Link from "next/link";
 import { pushWorkoutAction, deleteWorkoutAction } from "@/app/actions/intervals";
+import { saveProfileAction } from "@/app/actions/profiles";
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
 import { useData } from "@/context/DataContext";
 import { toggleWorkoutCompletionAction } from "@/app/actions/completion";
@@ -64,22 +65,22 @@ export default function Home() {
 
   const progressData = calculateTotalProgress();
 
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
   const handleOnboardingComplete = async (data: any) => {
     if (!session) {
       console.error('[Onboarding] No session found');
       return;
     }
 
-    console.log('[Onboarding] Starting to save profile data:', {
+    setIsSavingProfile(true);
+    console.log('[Onboarding] Starting to save profile data via Server Action:', {
       userId: session.user.id,
-      email: session.user.email,
       data
     });
 
     try {
       const profileData = {
-        id: session.user.id,
-        email: session.user.email,
         height: parseFloat(data.height),
         weight: parseFloat(data.weight),
         age: parseInt(data.age),
@@ -88,28 +89,25 @@ export default function Home() {
         onboarded: true,
       };
 
-      console.log('[Onboarding] Upserting profile:', profileData);
+      const result = await saveProfileAction(profileData);
 
-      const { data: upsertedData, error } = await supabase
-        .from("profiles")
-        .upsert(profileData, { onConflict: 'id' })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('[Onboarding] Upsert error:', error);
-        throw error;
+      if (!result.success) {
+        throw new Error(result.error || "Failed to save profile");
       }
 
-      console.log('[Onboarding] Profile saved successfully:', upsertedData);
-      console.log('[Onboarding] Refreshing data...');
+      console.log('[Onboarding] Profile saved successfully via action:', result.data);
+      console.log('[Onboarding] Refreshing data silently...');
 
-      await refreshData();
+      // Silent refresh prevents the Home component from switching to the loading spinner
+      // and unmounting the Onboarding component prematurely.
+      await refreshData({ silent: true });
 
       console.log('[Onboarding] Data refresh complete');
     } catch (err: any) {
       console.error('[Onboarding] Error saving profile:', err);
       alert("Error saving profile: " + (err.message || 'Unknown error'));
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -207,7 +205,7 @@ export default function Home() {
 
   if (!profile || !profile.onboarded) {
     console.log('[Home] No profile or not onboarded -> Showing Onboarding');
-    return <Onboarding onComplete={handleOnboardingComplete} />;
+    return <Onboarding onComplete={handleOnboardingComplete} isSaving={isSavingProfile} />;
   }
 
   return (

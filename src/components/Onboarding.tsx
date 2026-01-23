@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, User, Ruler, Weight, Timer, LogOut } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
-export default function Onboarding({ onComplete }: { onComplete: (data: any) => void }) {
+export default function Onboarding({ onComplete, isSaving }: { onComplete: (data: any) => void; isSaving?: boolean }) {
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         height: "",
@@ -39,7 +39,7 @@ export default function Onboarding({ onComplete }: { onComplete: (data: any) => 
             title: "Your age?",
             icon: <User className="w-8 h-8 text-primary" />,
             field: "age",
-            placeholder: "Years",
+            placeholder: "20",
             type: "number"
         },
         {
@@ -135,14 +135,24 @@ export default function Onboarding({ onComplete }: { onComplete: (data: any) => 
                             </div>
                             <button
                                 type="button"
+                                disabled={isSaving}
                                 onClick={() => {
                                     console.log("Finishing onboarding with data:", formData);
                                     onComplete(formData);
                                 }}
-                                className="w-full bg-primary text-black font-black italic py-4 rounded-xl flex items-center justify-center space-x-2 neo-blue-glow active:scale-95 transition-transform mt-4 uppercase tracking-widest"
+                                className={`w-full bg-primary text-black font-black italic py-4 rounded-xl flex items-center justify-center space-x-2 neo-blue-glow active:scale-95 transition-transform mt-4 uppercase tracking-widest ${isSaving ? "opacity-70 grayscale" : ""}`}
                             >
-                                <span>Finish Setup</span>
-                                <ArrowRight className="w-5 h-5" />
+                                {isSaving ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                                        <span>Saving ...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>Finish Setup</span>
+                                        <ArrowRight className="w-5 h-5" />
+                                    </>
+                                )}
                             </button>
                         </motion.div>
                     )}

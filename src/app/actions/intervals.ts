@@ -1,6 +1,7 @@
 "use server";
 
-import { createClient } from "@/lib/server-utils"; // Use the cookie-aware client
+import { createClient } from "@/lib/server-utils";
+import { generateGPX } from "@/lib/gpx-utils";
 
 const INTERVALS_BASE_URL = "https://intervals.icu/api/v1";
 
@@ -285,5 +286,44 @@ export async function getActivityStreamsAction(activityId: string) {
     } catch (error) {
         console.error("[Server Action] Exception fetching activity streams:", error);
         return null;
+    }
+}
+
+export async function uploadActivityAction(runData: any) {
+    console.log('[Server Action] uploadActivityAction called');
+    try {
+        const { athleteId, apiKey } = await getCredentials();
+
+        // Generate GPX
+        const gpxString = generateGPX(runData.path, `AeroRun: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`);
+
+        // Create FormData for upload
+        const formData = new FormData();
+        const blob = new Blob([gpxString], { type: 'application/gpx+xml' });
+        formData.append('file', blob, 'activity.gpx');
+
+        const url = `${INTERVALS_BASE_URL}/athlete/${athleteId}/upload`;
+        console.log('[Server Action] Uploading GPX to:', url);
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Basic ${Buffer.from(`API_KEY:${apiKey}`).toString("base64")}`,
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[Server Action] Upload Error: ${response.status} ${response.statusText}`, errorText);
+            throw new Error(`Upload failed: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log('[Server Action] Upload success:', result);
+        return { success: true, data: result };
+    } catch (error: any) {
+        console.error("[Server Action] Exception in uploadActivityAction:", error);
+        return { success: false, error: error.message || "Failed to upload activity." };
     }
 }

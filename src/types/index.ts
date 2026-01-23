@@ -27,3 +27,28 @@ export type Workout = {
     intervals_event_id?: string;
     structured_workout?: string;
 };
+
+export interface GeoPoint {
+    latitude: number;
+    longitude: number;
+    altitude: number | null;
+    timestamp: number;
+    speed: number | null;
+}
+
+export type LocalActivity = {
+    id: string;
+    user_id: string;
+    name: string;
+    distance: number;
+    moving_time: number;
+    elapsed_time: number;
+    start_date: string;
+    type: string;
+    path: GeoPoint[];
+    calories?: number;
+    average_pace?: number;
+    workout_id?: string;
+    intervals_id?: string;
+    created_at: string;
+};

@@ -15,7 +15,7 @@ interface DataContextType {
     refreshData: () => Promise<void>;
 }
 
-const DataContext = createContext<DataContextType | undefined>(undefined);
+export const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
     const [profile, setProfile] = useState<Profile | null>(null);
@@ -54,10 +54,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             console.log('[DataContext] Fetching profile, workouts, and activities...');
 
             // Fetch everything in parallel for maximum speed
-            const [profileRes, workoutsRes, activitiesRes] = await Promise.all([
+            const [profileRes, workoutsRes, activitiesRes, localActivitiesRes] = await Promise.all([
                 supabase.from("profiles").select("*").eq("id", activeSession.user.id).single(),
                 supabase.from("workouts").select("*").eq("user_id", activeSession.user.id).order("date", { ascending: true }),
-                getActivitiesAction()
+                getActivitiesAction(),
+                supabase.from("activities").select("*").eq("user_id", activeSession.user.id).order("start_date", { ascending: false })
             ]);
 
             console.log('[DataContext] Data fetched:', {
@@ -65,6 +66,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 profileOnboarded: profileRes.data?.onboarded,
                 workouts: workoutsRes.data?.length || 0,
                 activities: activitiesRes?.data?.length || 0,
+                localActivities: localActivitiesRes.data?.length || 0,
                 activitiesError: activitiesRes?.error
             });
 
@@ -76,6 +78,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
             const fetchedWorkouts = workoutsRes.data || [];
             const fetchedActivities = activitiesRes?.data || [];
+            const localActivities = localActivitiesRes.data || [];
             setActivitiesError(activitiesRes?.error || null);
 
             console.log('[DataContext] Updating state with fetched data...');
@@ -84,9 +87,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             const updatedWorkouts = [...fetchedWorkouts];
             const workoutsToUpdate: string[] = [];
 
-            fetchedWorkouts.forEach((w: any) => {
+            // Merge for completion check
+            const allActivities = [...localActivities, ...fetchedActivities];
+
+            updatedWorkouts.forEach((w: any) => {
                 if (!w.completed) {
-                    const hasActivity = fetchedActivities.some((a: any) => {
+                    const hasActivity = allActivities.some((a: any) => {
                         const aDate = new Date(a.start_date_local || a.start_date).toISOString().split('T')[0];
                         return aDate === w.date;
                     });
@@ -98,8 +104,26 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 }
             });
 
+            // --- MERGE & DEDUPLICATE ACTIVITIES ---
+            // Deduplicate by Intervals ID or use both (local ones might have more detail like paths)
+            const mergedActivities = [...localActivities];
+
+            fetchedActivities.forEach((ext: any) => {
+                const isAlreadyPresent = localActivities.some(loc => loc.intervals_id === ext.id?.toString());
+                if (!isAlreadyPresent) {
+                    mergedActivities.push(ext);
+                }
+            });
+
+            // Sort by date (descending)
+            mergedActivities.sort((a, b) => {
+                const dateA = new Date(a.start_date_local || a.start_date).getTime();
+                const dateB = new Date(b.start_date_local || b.start_date).getTime();
+                return dateB - dateA;
+            });
+
             setWorkouts(updatedWorkouts);
-            setActivities(fetchedActivities);
+            setActivities(mergedActivities);
 
             if (workoutsToUpdate.length > 0) {
                 console.log(`[DataContext] Auto-marking ${workoutsToUpdate.length} workouts as completed...`);

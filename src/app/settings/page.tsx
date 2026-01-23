@@ -32,6 +32,8 @@ export default function Settings() {
     const [edit5kTime, setEdit5kTime] = useState("");
     const [editAthleteId, setEditAthleteId] = useState("");
     const [editApiKey, setEditApiKey] = useState("");
+    const [editDisplayName, setEditDisplayName] = useState("");
+    const [editTrainingLevel, setEditTrainingLevel] = useState<"beginner" | "intermediate" | "elite">("intermediate");
 
     const [targetDistance, setTargetDistance] = useState<"5km" | "10km" | "Half Marathon" | "Full Marathon">("5km");
 
@@ -79,7 +81,9 @@ export default function Settings() {
                 weight: parseFloat(editWeight),
                 best_5k_time: edit5kTime,
                 intervals_athlete_id: editAthleteId,
-                intervals_api_key: editApiKey
+                intervals_api_key: editApiKey,
+                display_name: editDisplayName,
+                training_level: editTrainingLevel
             };
 
             console.log('[Settings] Updating profile with:', updateData);
@@ -117,6 +121,8 @@ export default function Settings() {
         setEdit5kTime(profile.best_5k_time || "");
         setEditAthleteId(profile.intervals_athlete_id || "");
         setEditApiKey(profile.intervals_api_key || "");
+        setEditDisplayName(profile.display_name || "");
+        setEditTrainingLevel(profile.training_level || "intermediate");
         setIsEditingProfile(true);
     };
 
@@ -598,8 +604,42 @@ export default function Settings() {
                                 <User className="w-6 h-6 text-primary" />
                             </div>
                             <div>
-                                <h3 className="font-bold text-gray-200">{profile.email.split('@')[0]}</h3>
-                                <p className="text-[10px] text-primary uppercase font-black tracking-[0.2em]">{profile.training_level} RUNNER</p>
+                                {isEditingProfile ? (
+                                    <div className="space-y-2">
+                                        <div>
+                                            <p className="text-[8px] text-white/20 uppercase font-black mb-1">Display Name</p>
+                                            <input
+                                                type="text"
+                                                value={editDisplayName}
+                                                onChange={(e) => setEditDisplayName(e.target.value)}
+                                                placeholder={profile.email.split('@')[0]}
+                                                className="bg-transparent text-gray-200 font-bold focus:outline-none w-full border-b border-primary/20 focus:border-primary transition-colors text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <p className="text-[8px] text-white/20 uppercase font-black mb-1">Runner Type</p>
+                                            <div className="flex gap-2">
+                                                {(['beginner', 'intermediate', 'elite'] as const).map((level) => (
+                                                    <button
+                                                        key={level}
+                                                        onClick={() => setEditTrainingLevel(level)}
+                                                        className={`text-[9px] px-2 py-1 rounded uppercase font-black tracking-wider transition-all ${editTrainingLevel === level
+                                                                ? "bg-primary text-black"
+                                                                : "bg-white/5 text-white/40 hover:bg-white/10"
+                                                            }`}
+                                                    >
+                                                        {level}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <h3 className="font-bold text-gray-200">{profile.display_name || profile.email.split('@')[0]}</h3>
+                                        <p className="text-[10px] text-primary uppercase font-black tracking-[0.2em]">{profile.training_level} RUNNER</p>
+                                    </>
+                                )}
                             </div>
                         </div>
                         {!isEditingProfile ? (

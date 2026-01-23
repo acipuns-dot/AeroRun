@@ -10,6 +10,7 @@ export type Profile = {
     created_at: string;
     intervals_athlete_id?: string;
     intervals_api_key?: string;
+    display_name?: string;
 };
 
 export type Workout = {

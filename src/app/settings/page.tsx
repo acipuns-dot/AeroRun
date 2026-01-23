@@ -603,7 +603,7 @@ export default function Settings() {
                             <div className="bg-primary/10 p-4 rounded-2xl border border-primary/20 shadow-[0_0_20px_rgba(0,195,255,0.1)]">
                                 <User className="w-6 h-6 text-primary" />
                             </div>
-                            <div>
+                            <div className="flex-1 mr-8">
                                 {isEditingProfile ? (
                                     <div className="space-y-2">
                                         <div>
@@ -624,8 +624,8 @@ export default function Settings() {
                                                         key={level}
                                                         onClick={() => setEditTrainingLevel(level)}
                                                         className={`text-[9px] px-2 py-1 rounded uppercase font-black tracking-wider transition-all ${editTrainingLevel === level
-                                                                ? "bg-primary text-black"
-                                                                : "bg-white/5 text-white/40 hover:bg-white/10"
+                                                            ? "bg-primary text-black"
+                                                            : "bg-white/5 text-white/40 hover:bg-white/10"
                                                             }`}
                                                     >
                                                         {level}

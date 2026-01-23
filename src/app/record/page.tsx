@@ -228,7 +228,7 @@ export default function RecordPage() {
                                 onClick={startRun}
                                 className="w-20 h-20 rounded-full bg-cyan-400 flex items-center justify-center shadow-[0_0_40px_rgba(0,255,255,0.3)] text-black active:scale-95 transition-transform"
                             >
-                                <Play className="w-10 h-10 fill-black ml-1.5" />
+                                <Play className="w-10 h-10 fill-black ml-1" />
                             </motion.button>
                         ) : isRunning ? (
                             <motion.button
@@ -252,7 +252,7 @@ export default function RecordPage() {
                                     onClick={startRun}
                                     className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center border border-green-500/20 text-green-500 active:scale-95 transition-transform"
                                 >
-                                    <Play className="w-6 h-6 fill-green-500 ml-1" />
+                                    <Play className="w-6 h-6 fill-green-500 ml-0.5" />
                                 </button>
 
                                 <button

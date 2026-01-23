@@ -1,7 +1,7 @@
 "use client";
 
 import { useRunTracker } from "@/hooks/useRunTracker";
-import { Play, Pause, Square, MapPin, Navigation } from "lucide-react";
+import { Play, Pause, Square, MapPin, Navigation, AlertCircle } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -35,24 +35,34 @@ export default function RecordPage() {
     const router = useRouter();
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [showFinishModal, setShowFinishModal] = useState(false);
+    const [showShortRunWarning, setShowShortRunWarning] = useState(false);
 
     const handleFinish = async () => {
-        if (!confirm("Finish and save workout?")) return;
+        if (elapsedTime < 120) {
+            setShowShortRunWarning(true);
+            setTimeout(() => setShowShortRunWarning(false), 3000);
+            return;
+        }
+        setShowFinishModal(true);
+    };
 
+    const confirmFinish = async () => {
+        setShowFinishModal(false);
         setIsSaving(true);
         setSaveError(null);
 
         try {
             const runData = stopRun();
             if (!runData.path || runData.path.length < 2) {
-                alert("Run too short to save!");
+                alert("Run data missing!");
                 setIsSaving(false);
                 return;
             }
 
             const result = await uploadActivityAction(runData);
 
-            // Local save (always save locally even if upload fails)
+            // Local save
             const localResult = await saveActivityAction({
                 name: `AeroRun: ${new Date().toLocaleDateString()}`,
                 distance: runData.distance,
@@ -193,7 +203,7 @@ export default function RecordPage() {
                 </div>
 
                 {/* Fixed Control Area */}
-                <div className="flex items-center justify-center pt-4">
+                <div className="flex items-center justify-center pt-4 pb-12">
                     <AnimatePresence mode="wait">
                         {!isRunning && elapsedTime === 0 ? (
                             <motion.button
@@ -247,6 +257,74 @@ export default function RecordPage() {
                     </AnimatePresence>
                 </div>
             </div>
+
+            {/* Premium Finish Modal */}
+            <AnimatePresence>
+                {showFinishModal && (
+                    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                            onClick={() => setShowFinishModal(false)}
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="bg-[#111] border border-white/10 rounded-[32px] p-8 w-full max-w-sm relative z-10 shadow-2xl"
+                        >
+                            <div className="text-center space-y-4">
+                                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <Square className="w-8 h-8 fill-primary text-primary" />
+                                </div>
+                                <h3 className="text-2xl font-black italic tracking-tighter uppercase">Finish Workout?</h3>
+                                <p className="text-white/40 text-sm font-medium leading-relaxed">
+                                    Ready to save your effort? Your activity will be synced to your history.
+                                </p>
+
+                                <div className="grid grid-cols-2 gap-4 pt-6">
+                                    <button
+                                        onClick={() => setShowFinishModal(false)}
+                                        className="py-4 rounded-2xl bg-white/5 border border-white/5 text-white/60 font-black uppercase text-xs tracking-widest hover:bg-white/10 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={confirmFinish}
+                                        className="py-4 rounded-2xl bg-primary text-black font-black uppercase text-xs tracking-widest shadow-[0_0_30px_rgba(0,255,255,0.3)] hover:scale-105 active:scale-95 transition-all"
+                                    >
+                                        Save Run
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Short Run Warning */}
+            <AnimatePresence>
+                {showShortRunWarning && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 50 }}
+                        className="fixed bottom-24 left-6 right-6 z-[600] pointer-events-none"
+                    >
+                        <div className="bg-orange-500/20 border border-orange-500/50 backdrop-blur-md p-4 rounded-2xl flex items-center space-x-4 shadow-xl">
+                            <div className="bg-orange-500 rounded-full p-2">
+                                <AlertCircle className="w-5 h-5 text-black" />
+                            </div>
+                            <div>
+                                <h4 className="text-white font-black italic tracking-tighter text-sm uppercase">Run Too Short</h4>
+                                <p className="text-white/60 text-xs font-bold leading-none mt-1">Activities must be at least 2 minutes long to save.</p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

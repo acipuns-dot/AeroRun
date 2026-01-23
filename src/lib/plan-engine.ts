@@ -206,18 +206,20 @@ function buildDynamicStructure(stats: UserStats): DayTemplate[] {
         if (assignedCount >= daysPerWeek) break;
 
         // Find next workout that doesn't violate "side-by-side" rule
+        // Quality runs (intervals, tempo) should not be next to EACH OTHER or the LONG RUN
         let workoutIdx = -1;
         const prevWorkout = plannedStructure.find(p => p.index === d - 1);
-        const isPrevQuality = prevWorkout && qualityTypes.includes(prevWorkout.type);
+        const nextWorkout = plannedStructure.find(p => p.index === d + 1);
 
-        if (isPrevQuality) {
+        const isPrevIntense = prevWorkout && (qualityTypes.includes(prevWorkout.type) || prevWorkout.type === "long");
+        const isNextIntense = nextWorkout && (qualityTypes.includes(nextWorkout.type) || nextWorkout.type === "long");
+
+        if (isPrevIntense || isNextIntense) {
             // Try to find a non-quality workout first
             workoutIdx = pool.findIndex(t => !qualityTypes.includes(t));
-            // If no easy runs left, we have no choice but to take a quality one or skip
-            // For now, we take the original priority order if forced
         }
 
-        if (workoutIdx === -1) workoutIdx = 0; // Take the next one in priority
+        if (workoutIdx === -1) workoutIdx = 0; // Take next from priority
 
         const type = pool.splice(workoutIdx, 1)[0] || "easy";
         plannedStructure.push({ index: d, type });

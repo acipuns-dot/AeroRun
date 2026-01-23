@@ -60,11 +60,14 @@ export default function RecordPage() {
                 return;
             }
 
-            const result = await uploadActivityAction(runData);
+            const activityTitle = getActivityTitle();
+
+            // Perform upload (Intervals.icu will use this name if provided in GPX or as metadata)
+            const result = await uploadActivityAction({ ...runData, name: activityTitle });
 
             // Local save
             const localResult = await saveActivityAction({
-                name: `AeroRun: ${new Date().toLocaleDateString()}`,
+                name: activityTitle,
                 distance: runData.distance,
                 moving_time: runData.elapsedTime,
                 elapsed_time: runData.elapsedTime,
@@ -88,6 +91,16 @@ export default function RecordPage() {
     };
 
     // Formatting helpers
+    const getActivityTitle = () => {
+        const hour = new Date().getHours();
+        let timeOfDay = "Night";
+        if (hour >= 5 && hour < 12) timeOfDay = "Morning";
+        else if (hour >= 12 && hour < 17) timeOfDay = "Afternoon";
+        else if (hour >= 17 && hour < 21) timeOfDay = "Evening";
+
+        return `AeroRun: ${timeOfDay} Run`;
+    };
+
     const formatTime = (seconds: number) => {
         const h = Math.floor(seconds / 3600);
         const m = Math.floor((seconds % 3600) / 60);

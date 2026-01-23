@@ -393,33 +393,39 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
         }
 
         const weekKm = peakKm * weekMultiplier;
-
-        // --- INTENSITY PROGRESSION (AeroEngine VDOT scaling) ---
-        // We start training at current fitness and build TO the goal fitness.
         const currentPlanVDOT = currentVDOT + (ambitiousVDOTGap * progress);
-
-        // Sharpening is now naturally handled by the built-in VDOT logic,
-        // but we can add a slight secondary sharpening for "race feel" in late weeks.
-        const paceSharpening = w < totalWeeks - 2 ? 1.0 : 0.99; // 1% faster in the final weeks
-
-        // Recalculate paces for THIS week's fitness level
+        const paceSharpening = w < totalWeeks - 2 ? 1.0 : 0.99;
         const weeklyPaces = getCalculatedPacesFromVDOT(currentPlanVDOT);
-
         const workoutScale = 0.7 + (progress * 0.3);
 
+        // --- QUALITY ALTERNATION LOGIC (For 3-day plans) ---
+        const isAlternatingWeek = w % 2 === 0;
+
         const days = structure.map(t => {
-            const dist = Math.round((weekKm * t.distFactor) * 10) / 10;
+            // --- WORKOUT TYPE LOGIC (Alternation + Safety) ---
+            let workoutType = t.type;
+
+            // 1. Quality Alternation for 3-day plans
+            if ((stats.daysPerWeek ?? 3) <= 3 && (t.type === "intervals" || t.type === "tempo")) {
+                workoutType = isAlternatingWeek ? "tempo" : "intervals";
+            }
+
+            // 2. Week 1 Safety Conversion (All intensity -> Easy)
+            const finalType = w === 1 && (workoutType === "intervals" || workoutType === "tempo" || workoutType === "long")
+                ? "easy"
+                : workoutType;
+
+            const baseDist = Math.round((weekKm * t.distFactor) * 10) / 10;
 
             let targetPace = "";
             let paceSec = weeklyPaces.easy.min;
             let description = "";
             let hrZone = "Zone 2";
 
-            // --- TAPER LOGIC (Point 4) ---
-            // In taper weeks (last 2), volume drops significantly, but intensity stays.
+            // --- TAPER LOGIC ---
             const isTaper = w >= totalWeeks - 1;
             const taperDistFactor = isTaper ? 0.6 : 1.0;
-            const finalDist = t.type === "long" || t.type === "easy" ? dist * taperDistFactor : dist;
+            const finalDist = t.type === "long" || t.type === "easy" ? baseDist * taperDistFactor : baseDist;
 
             let structuredWorkout = "";
 
@@ -599,18 +605,11 @@ export async function generateEnginePlan(stats: UserStats, variant: "steady" | "
                 targetPace = secondsToPace(paceSec);
             }
 
-            // --- WEEK 1 SAFETY: INTRO CONVERSION ---
-            // For Week 1, we convert all potentially high-impact workouts
-            // (Intervals, Tempo, Long) to "Easy" for all fitness levels.
-            const finalType = w === 1 && (t.type === "intervals" || t.type === "tempo" || t.type === "long")
-                ? "easy"
-                : t.type;
-
             return {
                 day: t.day,
                 type: finalType,
                 description,
-                distance: dist,
+                distance: finalDist,
                 duration,
                 target_pace: targetPace,
                 structured_workout: structuredWorkout

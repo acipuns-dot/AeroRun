@@ -164,10 +164,10 @@ function buildDynamicStructure(stats: UserStats): DayTemplate[] {
 
     // Priority-based workout sequence (DNA: Beginners get intensity but fewer sessions)
     const workoutPriority: WorkoutType[] = stats.goal === "beginner"
-        ? ["intervals", "tempo", "easy", "easy"]
+        ? ["intervals", "easy", "easy", "easy"]
         : stats.goal === "intermediate"
-            ? ["intervals", "tempo", "easy", "easy", "easy"]
-            : ["intervals", "tempo", "intervals", "easy", "easy", "easy"];
+            ? ["intervals", "easy", "easy", "easy", "easy"]
+            : ["intervals", "tempo", "easy", "easy", "easy", "easy"];
 
     // 1. Identify active days
     const activeDays: number[] = [];
@@ -201,12 +201,13 @@ function buildDynamicStructure(stats: UserStats): DayTemplate[] {
 
     const qualityTypes: WorkoutType[] = ["intervals", "tempo"];
     const pool = [...workoutPriority];
+    const maxQuality = (stats.goal === "elite") ? 2 : 1;
+    let currentQualityCount = 0;
 
     for (const d of otherActiveDays) {
         if (assignedCount >= daysPerWeek) break;
 
         // Find next workout that doesn't violate "side-by-side" rule
-        // Quality runs (intervals, tempo) should not be next to EACH OTHER or the LONG RUN
         let workoutIdx = -1;
         const prevWorkout = plannedStructure.find(p => p.index === d - 1);
         const nextWorkout = plannedStructure.find(p => p.index === d + 1);
@@ -214,18 +215,28 @@ function buildDynamicStructure(stats: UserStats): DayTemplate[] {
         const isPrevIntense = prevWorkout && (qualityTypes.includes(prevWorkout.type) || prevWorkout.type === "long");
         const isNextIntense = nextWorkout && (qualityTypes.includes(nextWorkout.type) || nextWorkout.type === "long");
 
-        if (isPrevIntense || isNextIntense) {
+        if (isPrevIntense || isNextIntense || currentQualityCount >= maxQuality) {
             // Try to find a non-quality workout first
             workoutIdx = pool.findIndex(t => !qualityTypes.includes(t));
+        } else {
+            // Prefer Quality if we haven't reached the limit and it's not side-by-side
+            workoutIdx = pool.findIndex(t => qualityTypes.includes(t));
+            // If no quality left in priority, fallback to next available
+            if (workoutIdx === -1) workoutIdx = 0;
         }
 
-        if (workoutIdx === -1) workoutIdx = 0; // Take next from priority
+        // Final fallback if we are at quality limit but pool still has quality runs at the front
+        if (workoutIdx === -1) workoutIdx = 0;
 
         const type = pool.splice(workoutIdx, 1)[0] || "easy";
         plannedStructure.push({ index: d, type });
 
-        if (qualityTypes.includes(type)) qCount++;
-        else eCount++;
+        if (qualityTypes.includes(type)) {
+            qCount++;
+            currentQualityCount++;
+        } else {
+            eCount++;
+        }
 
         assignedCount++;
     }

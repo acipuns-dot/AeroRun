@@ -171,10 +171,10 @@ export function useRunTracker(userWeightKg: number = 70) {
                     const timeDiff = (newPoint.timestamp - lastLocationRef.current.timestamp) / 1000;
                     const calculatedSpeed = timeDiff > 0 ? dist / timeDiff : 0;
 
-                    // Improved Drift Filter: 
-                    // 1. Must move more than 3 meters OR have a speed > 0.6 m/s (approx 2 km/h)
+                    // Responsive Drift Filter: 
+                    // 1. Must move more than 2 meters OR have a speed > 0.4 m/s (approx 1.5 km/h) to allow indoor "walk tests"
                     // 2. Must be slower than 12 m/s (approx 43 km/h)
-                    if ((dist > 3 || calculatedSpeed > 0.6) && calculatedSpeed < 12) {
+                    if ((dist > 2 || calculatedSpeed > 0.4) && calculatedSpeed < 12) {
                         setDistance((prev) => {
                             const newTotal = prev + dist;
                             const kcal = (newTotal / 1000) * userWeightKg * 1.036;
@@ -185,11 +185,12 @@ export function useRunTracker(userWeightKg: number = 70) {
                         lastLocationRef.current = newPoint;
 
                         recentPointsRef.current.push(newPoint);
-                        const cutoff = Date.now() - 30000; // Increased to 30s for professional smoothing
+                        // Highly responsive 12s window
+                        const cutoff = Date.now() - 12000;
                         recentPointsRef.current = recentPointsRef.current.filter(p => p.timestamp > cutoff);
 
                         if (recentPointsRef.current.length > 2) {
-                            // Calculate time-weighted average speed across the window
+                            // Calculate steeply time-weighted average speed
                             let totalWeightedSpeed = 0;
                             let totalWeight = 0;
 
@@ -200,10 +201,9 @@ export function useRunTracker(userWeightKg: number = 70) {
                                 const segmentDist = getDistanceFromLatLonInMeters(p1.latitude, p1.longitude, p2.latitude, p2.longitude);
                                 const segmentTime = (p2.timestamp - p1.timestamp) / 1000;
 
-                                // Filter out impossible speed spikes within the window
                                 if (segmentTime > 0 && (segmentDist / segmentTime) < 15) {
-                                    // Newest points have 2x weight of oldest points
-                                    const timeWeight = 1 + ((p2.timestamp - cutoff) / 30000);
+                                    // Newest points (last 4s) have much higher impact
+                                    const timeWeight = Math.pow(1 + ((p2.timestamp - cutoff) / 12000), 4);
                                     totalWeightedSpeed += (segmentDist / segmentTime) * timeWeight;
                                     totalWeight += timeWeight;
                                 }
@@ -212,24 +212,23 @@ export function useRunTracker(userWeightKg: number = 70) {
                             if (totalWeight > 0) {
                                 const avgSpeedMs = totalWeightedSpeed / totalWeight;
 
-                                // Human running bounds: 0.5 m/s to 10 m/s
-                                if (avgSpeedMs > 0.5 && avgSpeedMs < 10) {
+                                // Human matching: reset pace if speed is too low (walking vs stopping)
+                                if (avgSpeedMs > 0.4 && avgSpeedMs < 10) {
                                     const paceSecPerKm = 1000 / avgSpeedMs;
 
-                                    // Soft-transition pace (exponential smoothing)
+                                    // Faster transition for the responsive window
                                     setCurrentPace(prev => {
                                         if (prev === 0) return paceSecPerKm;
-                                        return prev * 0.8 + paceSecPerKm * 0.2;
+                                        return prev * 0.6 + paceSecPerKm * 0.4;
                                     });
-                                } else if (avgSpeedMs <= 0.5) {
-                                    setCurrentPace(0); // Effectively stopped
+                                } else if (avgSpeedMs <= 0.4) {
+                                    setCurrentPace(0);
                                 }
                             }
                         }
-                    } else if (dist < 1 && calculatedSpeed < 0.3) {
-                        // Fast Stop Detection: If almost no movement, decay pace quickly
-                        setCurrentPace(prev => (prev > 0 ? Math.min(prev * 1.2, 3599) : 0));
-                        // Note: Higher pace value = slower speed. Trending to 3599 (slow) or 0 (stopped)
+                    } else if (dist < 1 && calculatedSpeed < 0.2) {
+                        // Quick Stop Detection: Reset to 0 if definitely stopped
+                        setCurrentPace(0);
                     }
                 } else {
                     setPath([newPoint]);

@@ -107,109 +107,115 @@ export default function RecordPage() {
     }, [currentLocation]);
 
     return (
-        <div className="h-[100dvh] bg-[#0A0A0A] text-white flex flex-col relative overflow-hidden">
+        <div className="h-[100dvh] bg-[#0A0A0A] text-white flex flex-col relative overflow-hidden select-none touch-none">
             {/* Header / Map Area */}
-            <div className="h-[35vh] relative w-full border-b border-white/10">
+            <div className="h-[30vh] relative w-full border-b border-white/5">
                 <LiveMap path={pathCoords} currentLocation={currentCoords} />
 
                 {/* Overlay Header */}
-                <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-[500] pointer-events-none">
+                <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start z-[500] pointer-events-none">
                     <div className="flex flex-col">
-                        <span className="text-[11px] uppercase font-black tracking-[0.1em] text-primary">Live Tracking</span>
-                        <div className="flex items-center space-x-2 mt-2">
+                        <span className="text-[10px] uppercase font-black tracking-[0.1em] text-cyan-400">Live Tracking</span>
+                        <div className="flex items-center space-x-2 mt-1">
                             {isRunning ? (
-                                <div className="flex items-center space-x-2 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-green-500/20">
+                                <div className="flex items-center space-x-2 bg-black/40 backdrop-blur-md px-2 py-0.5 rounded-full border border-green-500/20">
                                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                    <span className="text-[10px] font-bold text-white/80 uppercase">Recording</span>
+                                    <span className="text-[9px] font-bold text-white/80 uppercase">Recording</span>
                                 </div>
                             ) : (
-                                <div className="flex items-center space-x-2 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/5">
+                                <div className="flex items-center space-x-2 bg-black/40 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/5">
                                     <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
-                                    <span className="text-[10px] font-bold text-white/40 uppercase">Paused</span>
+                                    <span className="text-[9px] font-bold text-white/40 uppercase">Paused</span>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <Link href="/" className="pointer-events-auto bg-black/40 backdrop-blur-md w-10 h-10 rounded-full flex items-center justify-center text-white/40 hover:text-white border border-white/5 transition-colors">
+                    <Link href="/" className="pointer-events-auto bg-black/40 backdrop-blur-md w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white border border-white/5 transition-colors">
                         <span className="sr-only">Close</span>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
                         </svg>
                     </Link>
                 </div>
 
+                {!currentLocation && !error && (
+                    <div className="absolute inset-0 flex items-center justify-center z-[400] bg-black/20 pointer-events-none">
+                        <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">Waiting for GPS</p>
+                    </div>
+                )}
+
                 {(error || saveError) && (
-                    <div className="absolute bottom-4 left-4 right-4 bg-red-500/20 border border-red-500/50 backdrop-blur-md p-3 rounded-xl z-[500] pointer-events-none">
-                        <p className="text-red-200 text-xs font-bold flex items-center">
+                    <div className="absolute bottom-2 left-2 right-2 bg-red-500/20 border border-red-500/50 backdrop-blur-md p-2 rounded-lg z-[500] pointer-events-none">
+                        <p className="text-red-200 text-[10px] font-black uppercase flex items-center">
                             <Navigation className="w-3 h-3 mr-2" />
-                            {saveError ? `Save Error: ${saveError}` : `GPS Signal Lost: ${error}`}
+                            {saveError ? `Save Error: ${saveError}` : `GPS Lost: ${error}`}
                         </p>
                     </div>
                 )}
             </div>
 
-            {/* Stats Area - The HUD */}
-            <div className="flex-1 flex flex-col p-6 relative z-10 space-y-4">
+            {/* Stats Area - The Vertical HUD */}
+            <div className="flex-1 flex flex-col items-center justify-between p-4 relative z-10 py-6">
 
                 {/* Main Timer */}
-                <div className="text-center space-y-0 mt-4">
-                    <p className="text-[11px] text-white/30 uppercase font-bold tracking-[0.2em]">Total Time</p>
-                    <h1 className="text-[110px] font-black italic tracking-tighter leading-none tabular-nums text-white">
+                <div className="text-center w-full">
+                    <p className="text-[10px] text-white/20 uppercase font-black tracking-[0.3em] mb-1">Total Time</p>
+                    <h1 className="text-7xl font-black italic tracking-tighter leading-none tabular-nums text-white lg:text-8xl">
                         {formatTime(elapsedTime)}
                     </h1>
                 </div>
 
-                {/* Grid Stats */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-[#111] p-6 rounded-[32px] border border-white/5 flex flex-col items-center justify-center space-y-4">
-                        <MapPin className="w-6 h-6 text-primary" />
+                {/* Compact 3-Column Stats Row */}
+                <div className="grid grid-cols-3 gap-1 w-full max-w-sm mt-4">
+                    <div className="bg-[#111] p-4 py-6 rounded-[28px] border border-white/5 flex flex-col items-center justify-center space-y-3">
+                        <MapPin className="w-5 h-5 text-cyan-400" />
                         <div className="text-center">
-                            <h2 className="text-5xl font-black italic tabular-nums leading-none tracking-tighter">{formatDistance(distance)}</h2>
-                            <p className="text-[10px] text-white/30 uppercase font-bold tracking-widest mt-2">Kilometers</p>
+                            <h2 className="text-3xl font-black italic tabular-nums leading-none tracking-tighter">{formatDistance(distance)}</h2>
+                            <p className="text-[9px] text-white/20 uppercase font-bold tracking-widest mt-1">KM</p>
                         </div>
                     </div>
-                    <div className="bg-[#111] p-6 rounded-[32px] border border-white/5 flex flex-col items-center justify-center space-y-4">
-                        <Navigation className="w-6 h-6 text-purple-500" />
+                    <div className="bg-[#111] p-4 py-6 rounded-[28px] border border-white/5 flex flex-col items-center justify-center space-y-3">
+                        <Navigation className="w-5 h-5 text-purple-500" />
                         <div className="text-center">
-                            <h2 className="text-5xl font-black italic tabular-nums leading-none tracking-tighter">{formatPace(currentPace)}</h2>
-                            <p className="text-[10px] text-white/30 uppercase font-bold tracking-widest mt-2">Current Pace</p>
+                            <h2 className="text-3xl font-black italic tabular-nums leading-none tracking-tighter">{formatPace(currentPace)}</h2>
+                            <p className="text-[9px] text-white/20 uppercase font-bold tracking-widest mt-1">PACE</p>
                         </div>
                     </div>
-                    <div className="bg-[#111] p-6 rounded-[32px] border border-white/5 flex flex-col items-center justify-center space-y-4 col-span-2">
-                        <span className="text-2xl">🔥</span>
+                    <div className="bg-[#111] p-4 py-6 rounded-[28px] border border-white/5 flex flex-col items-center justify-center space-y-3">
+                        <span className="text-xl">🔥</span>
                         <div className="text-center">
-                            <h2 className="text-5xl font-black italic tabular-nums leading-none tracking-tighter">{calories}</h2>
-                            <p className="text-[10px] text-white/30 uppercase font-bold tracking-widest mt-2">Calories Burned</p>
+                            <h2 className="text-3xl font-black italic tabular-nums leading-none tracking-tighter">{calories}</h2>
+                            <p className="text-[9px] text-white/20 uppercase font-bold tracking-widest mt-1">CAL</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Controls */}
-                <div className="flex-1 flex items-end justify-center pb-8 safe-area-pb">
+                {/* Fixed Control Area */}
+                <div className="flex items-center justify-center pt-4">
                     <AnimatePresence mode="wait">
                         {!isRunning && elapsedTime === 0 ? (
                             <motion.button
                                 key="start"
-                                initial={{ scale: 0.9, opacity: 0 }}
+                                initial={{ scale: 0.8, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0.9, opacity: 0 }}
+                                exit={{ scale: 0.8, opacity: 0 }}
                                 onClick={startRun}
-                                className="w-28 h-28 rounded-full bg-primary flex items-center justify-center shadow-[0_0_50px_rgba(0,255,255,0.3)] text-black font-black active:scale-95 transition-transform"
+                                className="w-20 h-20 rounded-full bg-cyan-400 flex items-center justify-center shadow-[0_0_40px_rgba(0,255,255,0.3)] text-black active:scale-95 transition-transform"
                             >
-                                <Play className="w-12 h-12 fill-black ml-1.5" />
+                                <Play className="w-10 h-10 fill-black ml-1.5" />
                             </motion.button>
                         ) : isRunning ? (
                             <motion.button
                                 key="pause"
-                                initial={{ scale: 0.9, opacity: 0 }}
+                                initial={{ scale: 0.8, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0.9, opacity: 0 }}
+                                exit={{ scale: 0.8, opacity: 0 }}
                                 onClick={pauseRun}
-                                className="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center border border-white/10 text-white font-black active:scale-95 transition-transform"
+                                className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center border border-white/10 text-white active:scale-95 transition-transform"
                             >
-                                <Pause className="w-10 h-10 fill-white" />
+                                <Pause className="w-8 h-8 fill-white" />
                             </motion.button>
                         ) : (
                             <motion.div
@@ -220,20 +226,20 @@ export default function RecordPage() {
                             >
                                 <button
                                     onClick={startRun}
-                                    className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/40 text-green-500 active:scale-95 transition-transform"
+                                    className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center border border-green-500/20 text-green-500 active:scale-95 transition-transform"
                                 >
-                                    <Play className="w-8 h-8 fill-green-500 ml-1" />
+                                    <Play className="w-6 h-6 fill-green-500 ml-1" />
                                 </button>
 
                                 <button
                                     onClick={handleFinish}
                                     disabled={isSaving}
-                                    className={`w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center border border-red-500/40 text-red-500 active:scale-95 transition-transform ${isSaving ? "opacity-50" : ""}`}
+                                    className={`w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20 text-red-500 active:scale-95 transition-transform ${isSaving ? "opacity-50" : ""}`}
                                 >
                                     {isSaving ? (
-                                        <div className="w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                                        <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
                                     ) : (
-                                        <Square className="w-8 h-8 fill-red-500" />
+                                        <Square className="w-6 h-6 fill-red-500" />
                                     )}
                                 </button>
                             </motion.div>
@@ -242,5 +248,7 @@ export default function RecordPage() {
                 </div>
             </div>
         </div>
+    );
+}
     );
 }

@@ -21,6 +21,14 @@ export function useRunTracker(userWeightKg: number = 70) {
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const lastLocationRef = useRef<GeoPoint | null>(null);
 
+    // Refs to avoid stale closures in geolocation callbacks
+    const isRunningRef = useRef(false);
+    const isPausedRef = useRef(false);
+
+    // Sync refs with state
+    useEffect(() => { isRunningRef.current = isRunning; }, [isRunning]);
+    useEffect(() => { isPausedRef.current = isAutoPaused; }, [isAutoPaused]);
+
     // Pace smoothing buffer
     const recentPointsRef = useRef<GeoPoint[]>([]);
     const AUTO_PAUSE_THRESHOLD = 1.0; // m/s (approx 3.6 km/h) - stop if slower than this
@@ -122,7 +130,7 @@ export function useRunTracker(userWeightKg: number = 70) {
         // Start Timer
         const startTime = Date.now() - (elapsedTime * 1000);
         timerRef.current = setInterval(() => {
-            if (!isAutoPaused) {
+            if (!isPausedRef.current) {
                 setElapsedTime((prev) => prev + 1);
             }
         }, 1000);

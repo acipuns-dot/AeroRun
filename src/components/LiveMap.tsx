@@ -38,9 +38,7 @@ export default function LiveMap({ path, currentLocation }: LiveMapProps) {
 
     if (!currentLocation && path.length === 0) {
         return (
-            <div className="h-full w-full flex items-center justify-center bg-black/50 backdrop-blur-sm border-b border-white/10">
-                <p className="text-white/40 text-xs animate-pulse">Waiting for GPS...</p>
-            </div>
+            <div className="h-full w-full bg-[#0A0A0A]" />
         );
     }
 

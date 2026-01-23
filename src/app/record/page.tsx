@@ -250,5 +250,3 @@ export default function RecordPage() {
         </div>
     );
 }
-    );
-}
